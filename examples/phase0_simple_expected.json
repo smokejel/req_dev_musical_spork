@@ -1,0 +1,32 @@
+[
+  {
+    "id": "EXTRACT-FUNC-001",
+    "text": "The system shall authenticate users using OAuth2",
+    "type": "functional",
+    "source_reference": "Section 3.1"
+  },
+  {
+    "id": "EXTRACT-FUNC-002",
+    "text": "The system shall log all user actions to the audit database",
+    "type": "functional",
+    "source_reference": "Section 3.1"
+  },
+  {
+    "id": "EXTRACT-PERF-001",
+    "text": "The system shall process login requests within 500ms",
+    "type": "performance",
+    "source_reference": "Section 3.2"
+  },
+  {
+    "id": "EXTRACT-PERF-002",
+    "text": "The system shall support 1000 concurrent users",
+    "type": "performance",
+    "source_reference": "Section 3.2"
+  },
+  {
+    "id": "EXTRACT-CONS-001",
+    "text": "The system shall operate on Linux kernel 5.15 or later",
+    "type": "constraint",
+    "source_reference": "Section 3.3"
+  }
+]

@@ -1,0 +1,176 @@
+[
+  {
+    "id": "EXTRACT-FUNC-001",
+    "text": "Communication with satellites shall happen using X-band frequencies",
+    "type": "constraint",
+    "source_reference": "REQUIREMENTS, Paragraph 1"
+  },
+  {
+    "id": "EXTRACT-FUNC-002",
+    "text": "The system must handle multiple simultaneous connections",
+    "type": "functional",
+    "source_reference": "REQUIREMENTS, Paragraph 1"
+  },
+  {
+    "id": "EXTRACT-PERF-001",
+    "text": "The ground station shall process uplink commands within 50ms",
+    "type": "performance",
+    "source_reference": "REQUIREMENTS, Paragraph 1"
+  },
+  {
+    "id": "EXTRACT-FUNC-003",
+    "text": "The ground station must monitor satellite health telemetry continuously tracking temperature voltage and orientation data",
+    "type": "functional",
+    "source_reference": "REQUIREMENTS, Paragraph 3"
+  },
+  {
+    "id": "EXTRACT-FUNC-004",
+    "text": "The system must generate alerts when anomalies are detected",
+    "type": "functional",
+    "source_reference": "REQUIREMENTS, Paragraph 3"
+  },
+  {
+    "id": "EXTRACT-PERF-002",
+    "text": "Uplink data rate: 10 Mbps minimum",
+    "type": "performance",
+    "source_reference": "Table 1"
+  },
+  {
+    "id": "EXTRACT-PERF-003",
+    "text": "Downlink data rate: 50 Mbps minimum",
+    "type": "performance",
+    "source_reference": "Table 1"
+  },
+  {
+    "id": "EXTRACT-PERF-004",
+    "text": "Command latency: < 50ms",
+    "type": "performance",
+    "source_reference": "Table 1"
+  },
+  {
+    "id": "EXTRACT-PERF-005",
+    "text": "Signal acquisition: < 5 seconds",
+    "type": "performance",
+    "source_reference": "Table 1"
+  },
+  {
+    "id": "EXTRACT-PERF-006",
+    "text": "Concurrent satellites: 10 maximum",
+    "type": "performance",
+    "source_reference": "Table 1"
+  },
+  {
+    "id": "EXTRACT-FUNC-005",
+    "text": "The system shall maintain connection logs for audit purposes",
+    "type": "functional",
+    "source_reference": "REQUIREMENTS, Paragraph 6"
+  },
+  {
+    "id": "EXTRACT-FUNC-006",
+    "text": "When a satellite goes out of range, the system should queue commands for later transmission",
+    "type": "functional",
+    "source_reference": "REQUIREMENTS, Paragraph 7"
+  },
+  {
+    "id": "EXTRACT-FUNC-007",
+    "text": "The system must detect transmission errors and automatically retry failed commands up to 3 times before alerting operators",
+    "type": "functional",
+    "source_reference": "ERROR HANDLING"
+  },
+  {
+    "id": "EXTRACT-PERF-007",
+    "text": "Error rates shall not exceed 0.1% under normal conditions",
+    "type": "performance",
+    "source_reference": "ERROR HANDLING"
+  },
+  {
+    "id": "EXTRACT-CONS-001",
+    "text": "Historical data going back 5 years is required for trend analysis",
+    "type": "constraint",
+    "source_reference": "Database"
+  },
+  {
+    "id": "EXTRACT-CONS-002",
+    "text": "The database shall be backed up daily",
+    "type": "functional",
+    "source_reference": "Database"
+  },
+  {
+    "id": "EXTRACT-CONS-003",
+    "text": "Backup retention is 10 years minimum for regulatory compliance",
+    "type": "constraint",
+    "source_reference": "Database"
+  },
+  {
+    "id": "EXTRACT-INTF-001",
+    "text": "The system will communicate with the Mission Control System via TCP/IP using a custom protocol",
+    "type": "interface",
+    "source_reference": "INTERFACES"
+  },
+  {
+    "id": "EXTRACT-INTF-002",
+    "text": "The system shall provide a REST API for external monitoring tools",
+    "type": "interface",
+    "source_reference": "INTERFACES"
+  },
+  {
+    "id": "EXTRACT-INTF-003",
+    "text": "The system must support webhook notifications for critical events",
+    "type": "interface",
+    "source_reference": "INTERFACES"
+  },
+  {
+    "id": "EXTRACT-CONS-004",
+    "text": "The ground station equipment shall operate on standard 110V/220V power",
+    "type": "constraint",
+    "source_reference": "Power requirements"
+  },
+  {
+    "id": "EXTRACT-CONS-005",
+    "text": "The system shall include UPS backup providing at least 4 hours of operation during power outages",
+    "type": "functional",
+    "source_reference": "Power requirements"
+  },
+  {
+    "id": "EXTRACT-CONS-006",
+    "text": "The system must continue operating in extreme weather conditions including temperatures from -20C to +50C",
+    "type": "constraint",
+    "source_reference": "Weather"
+  },
+  {
+    "id": "EXTRACT-CONS-007",
+    "text": "The system must operate in humidity up to 95%",
+    "type": "constraint",
+    "source_reference": "Weather"
+  },
+  {
+    "id": "EXTRACT-CONS-008",
+    "text": "The system must operate in wind speeds up to 100 km/h",
+    "type": "constraint",
+    "source_reference": "Weather"
+  },
+  {
+    "id": "EXTRACT-FUNC-008",
+    "text": "The system shall support remote diagnostics and firmware updates without requiring physical access",
+    "type": "functional",
+    "source_reference": "Maintenance"
+  },
+  {
+    "id": "EXTRACT-FUNC-009",
+    "text": "The system shall implement frequency hopping and power control features",
+    "type": "functional",
+    "source_reference": "FCC compliance"
+  },
+  {
+    "id": "EXTRACT-FUNC-010",
+    "text": "Real-time visualization of satellite orbits shall be displayed on a 3D globe interface",
+    "type": "functional",
+    "source_reference": "Paragraph near end"
+  },
+  {
+    "id": "EXTRACT-CONS-009",
+    "text": "Mission data shall be archived to offline storage after 90 days of online retention",
+    "type": "functional",
+    "source_reference": "Archive"
+  }
+]

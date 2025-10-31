@@ -1,0 +1,335 @@
+# Requirements Development Agentic Workflow - .gitignore
+
+# ============================================================================
+# Environment and Secrets
+# ============================================================================
+
+# Environment variables (NEVER COMMIT API KEYS!)
+.env
+.env.local
+.env.*.local
+
+# API keys and secrets
+*.key
+*.pem
+secrets/
+credentials.json
+
+# ============================================================================
+# Python
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ============================================================================
+# IDEs and Editors
+# ============================================================================
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# Operating System
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+
+# LangSmith / LangChain tracing (if using local storage)
+langchain_cache/
+langchain_logs/
+
+# LangGraph checkpoints and state persistence
+checkpoints/
+*.db
+*.sqlite
+
+# Generated outputs
+outputs/
+output/
+results/
+*.pdf
+*.csv
+*.json
+!examples/**/*.json  # Keep example expected outputs
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Test artifacts
+test_outputs/
+test_results/
+
+# LLM responses cache (if implemented)
+cache/
+.cache/
+llm_cache/
+
+# Documentation builds (if using Sphinx or similar)
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Logs
+logs/
+*.log
+
+# ============================================================================
+# Keep These Files (Exceptions)
+# ============================================================================
+
+# Keep example files
+!examples/
+!examples/**/*.txt
+!examples/**/*.json
+
+# Keep test fixtures
+!tests/fixtures/
+!tests/fixtures/**/*.py
+!tests/fixtures/**/*.json
+
+# Keep .env.example (template for users)
+!.env.example
+
+# Keep skill examples
+!skills/**/examples/
+!skills/**/examples/**
+
+# ============================================================================
+# Development and Experimentation
+# ============================================================================
+
+# Jupyter notebooks (optional - uncomment if you want to ignore them)
+# *.ipynb
+
+# Scratch files
+scratch/
+playground/
+experiments/
+sandbox/
+
+# Personal notes
+notes.md
+TODO.md
+NOTES.txt
+
+# AI Assistant context files (for local development only)
+CLAUDE.md
+DOCUMENTATION_REORGANIZATION_SUMMARY.md
+
+# Large files (LFS might be needed for these)
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+
+# ============================================================================
+# CI/CD
+# ============================================================================
+
+# GitHub Actions artifacts
+.github/workflows/artifacts/
+
+# Coverage reports (HTML)
+htmlcov/

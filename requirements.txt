@@ -1,0 +1,16 @@
+# Phase 0: Minimal dependencies for skills validation
+langchain>=0.1.0
+langchain-anthropic>=0.1.0
+langchain-openai>=0.1.0
+python-dotenv>=1.0.0
+
+# Phase 1: Foundation - Base architecture and Extract node
+langgraph>=0.0.40          # Graph workflow orchestration
+pydantic>=2.5.0            # State schema validation
+python-docx>=1.0.0         # DOCX document parsing
+PyPDF2>=3.0.0              # PDF document parsing
+pytest>=7.4.0              # Testing framework
+rich>=13.0.0               # CLI output formatting
+
+# Future phases will add:
+# langchain-google-genai   # Gemini models support (Phase 2+)

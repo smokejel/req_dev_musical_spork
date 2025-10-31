@@ -1,0 +1,34 @@
+Train Management System - Requirements Specification
+
+Background:
+This document describes the requirements for a Train Management System (TMS) that will track train locations, manage schedules, and provide real-time updates to operators. The system is being developed to modernize legacy infrastructure.
+
+Functional Requirements:
+
+The system shall track real-time location of all active trains with GPS accuracy of ±10 meters and shall update the central database every 30 seconds.
+
+The TMS must authenticate operators via multi-factor authentication before granting access.
+
+The system should display train schedules in a user-friendly format on the operator dashboard.
+
+Train status updates shall be sent to the monitoring service via REST API whenever a train changes state (e.g., departing, arriving, delayed).
+
+The system shall generate daily reports of train operations and must archive them for at least 7 years for compliance purposes.
+
+Operators shall be able to manually override automated routing decisions in emergency situations, but all overrides must be logged with justification.
+
+Performance and Constraints:
+
+The dashboard must load quickly to ensure operators can respond to incidents.
+
+The system shall support up to 500 simultaneous operator connections.
+
+REQ-PERF-01: Database queries shall complete within 200ms for 95% of requests.
+
+The system may use third-party mapping services for route visualization.
+
+All train location data must be encrypted both in transit and at rest using AES-256.
+
+The TMS shall operate 24/7 with 99.9% uptime.
+
+System responses should feel responsive to maintain operator confidence.

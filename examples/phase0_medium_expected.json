@@ -1,0 +1,74 @@
+[
+  {
+    "id": "EXTRACT-FUNC-001",
+    "text": "The system shall track real-time location of all active trains with GPS accuracy of ±10 meters",
+    "type": "performance",
+    "source_reference": "Functional Requirements, Paragraph 1"
+  },
+  {
+    "id": "EXTRACT-FUNC-002",
+    "text": "The system shall update the central database every 30 seconds",
+    "type": "performance",
+    "source_reference": "Functional Requirements, Paragraph 1"
+  },
+  {
+    "id": "EXTRACT-FUNC-003",
+    "text": "The TMS must authenticate operators via multi-factor authentication before granting access",
+    "type": "functional",
+    "source_reference": "Functional Requirements, Paragraph 2"
+  },
+  {
+    "id": "EXTRACT-FUNC-004",
+    "text": "Train status updates shall be sent to the monitoring service via REST API whenever a train changes state",
+    "type": "interface",
+    "source_reference": "Functional Requirements, Paragraph 4"
+  },
+  {
+    "id": "EXTRACT-FUNC-005",
+    "text": "The system shall generate daily reports of train operations",
+    "type": "functional",
+    "source_reference": "Functional Requirements, Paragraph 5"
+  },
+  {
+    "id": "EXTRACT-FUNC-006",
+    "text": "The system must archive reports for at least 7 years for compliance purposes",
+    "type": "constraint",
+    "source_reference": "Functional Requirements, Paragraph 5"
+  },
+  {
+    "id": "EXTRACT-FUNC-007",
+    "text": "Operators shall be able to manually override automated routing decisions in emergency situations",
+    "type": "functional",
+    "source_reference": "Functional Requirements, Paragraph 6"
+  },
+  {
+    "id": "EXTRACT-FUNC-008",
+    "text": "All overrides must be logged with justification",
+    "type": "functional",
+    "source_reference": "Functional Requirements, Paragraph 6"
+  },
+  {
+    "id": "EXTRACT-PERF-001",
+    "text": "The system shall support up to 500 simultaneous operator connections",
+    "type": "performance",
+    "source_reference": "Performance and Constraints, Paragraph 2"
+  },
+  {
+    "id": "EXTRACT-PERF-002",
+    "text": "Database queries shall complete within 200ms for 95% of requests",
+    "type": "performance",
+    "source_reference": "Performance and Constraints, Paragraph 3"
+  },
+  {
+    "id": "EXTRACT-CONS-001",
+    "text": "All train location data must be encrypted both in transit and at rest using AES-256",
+    "type": "constraint",
+    "source_reference": "Performance and Constraints, Paragraph 5"
+  },
+  {
+    "id": "EXTRACT-PERF-003",
+    "text": "The TMS shall operate 24/7 with 99.9% uptime",
+    "type": "performance",
+    "source_reference": "Performance and Constraints, Paragraph 6"
+  }
+]
