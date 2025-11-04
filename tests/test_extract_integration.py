@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from src.nodes.extract_node import extract_node
-from src.state import create_initial_state
+from src.state import create_initial_state, RequirementType
 
 
 # =======================================================================
@@ -51,9 +51,9 @@ class TestExtractIntegration:
             assert req["id"].startswith("EXTRACT-")
             assert req["id"].count("-") == 2  # PREFIX-TYPE-NNN
 
-        # Should have types
+        # Should have types (checking for enum objects, not strings)
         types = [req["type"] for req in result["extracted_requirements"]]
-        assert "functional" in types or "performance" in types
+        assert RequirementType.FUNCTIONAL in types or RequirementType.PERFORMANCE in types
 
         # Load expected results for comparison
         expected_path = Path("examples/phase0_simple_expected.json")

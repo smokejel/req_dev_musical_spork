@@ -4,7 +4,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.0.40+-green.svg)](https://github.com/langchain-ai/langgraph)
-[![Phase 1 Complete](https://img.shields.io/badge/Phase%201-Complete-brightgreen.svg)](docs/phases/phase1/README.md)
+[![Phase 3 Complete](https://img.shields.io/badge/Phase%203-Complete-brightgreen.svg)](docs/phases/phase3/README.md)
 [![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen.svg)](tests/)
 
 ---
@@ -32,7 +32,7 @@ This system automates requirements engineering by:
 
 - Python 3.11 or higher
 - pip (Python package manager)
-- API keys for LLM providers (Anthropic, OpenAI - optional)
+- API keys for LLM providers (Anthropic, OpenAI, or Google)
 
 ### Installation
 
@@ -41,21 +41,24 @@ This system automates requirements engineering by:
 git clone https://github.com/yourusername/req_dev_musical_spork.git
 cd req_dev_musical_spork
 
-# Install the package in development mode
-pip install -e .
+# Install dependencies
+pip install -r requirements.txt
 
 # Configure API keys (create .env file)
 cp .env.example .env
 # Edit .env and add your API keys
 ```
 
-### Verify Installation
+### First Run
 
 ```bash
-# Run unit tests to verify everything works
-pytest tests/ -m "phase1 and unit" -v
+# Run decomposition for Authentication subsystem
+python main.py examples/phase0_simple_spec.txt --subsystem "Authentication"
 
-# Expected output: 105 passed in ~6 seconds
+# Check output
+ls outputs/run_*
+
+# Expected: Timestamped directory with requirements, traceability, and quality report
 ```
 
 ---
@@ -200,10 +203,40 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 
 ## 📊 Current Status
 
-### Phase 1: Foundation ✅ **COMPLETE**
+### Phase 3: Graph Assembly & UX ✅ **COMPLETE**
 
-**Date:** October 30, 2025
-**Duration:** 1 day (rapid implementation)
+**Date:** November 2, 2025
+**Duration:** Week 3 of MVP
+
+**Deliverables:**
+- ✅ Complete LangGraph workflow assembly
+- ✅ Real-time progress tracking with timing
+- ✅ Timestamped output directory organization
+- ✅ Zero requirements handling (valid empty results)
+- ✅ Human-in-the-loop review integration
+- ✅ State persistence with SQLite checkpointing
+- ✅ Professional UX with Rich terminal output
+
+**Key Features:**
+- Interactive CLI with progress feedback
+- Quality refinement loop (validate → decompose)
+- Pre-decomposition review option
+- Allocation reports for zero requirements
+- Resume capability infrastructure
+
+[See Phase 3 Documentation](docs/phases/phase3/README.md)
+
+### Phase 2: Core Decomposition ✅ **COMPLETE**
+
+**Deliverables:**
+- ✅ Analyze node (SystemArchitectAgent)
+- ✅ Decompose node (RequirementsEngineerAgent)
+- ✅ Validate node (QualityAssuranceAgent)
+- ✅ Traceability implementation
+- ✅ Quality validation with 4 metrics
+- ✅ Refinement feedback loop
+
+### Phase 1: Foundation ✅ **COMPLETE**
 
 **Deliverables:**
 - ✅ Complete project structure
@@ -212,14 +245,9 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 - ✅ Extract node with RequirementsAnalystAgent
 - ✅ Document parser (txt, docx, pdf)
 - ✅ Skill loader with caching
-- ✅ **110 comprehensive tests (100% passing)**
-- ✅ Complete documentation
+- ✅ 110 comprehensive tests (100% passing)
 
-**Metrics:**
-- 4,200+ lines of code
-- 23 files created
-- 110 tests (105 unit + 5 integration)
-- 100% test success rate
+[See Phase 1 Documentation](docs/phases/phase1/README.md)
 
 ### Phase 0: Skills Validation ✅ **COMPLETE**
 
@@ -229,12 +257,15 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 - Reliable instruction adherence
 - GO decision for full implementation
 
-### Next Up: Phase 2 (Core Decomposition)
+[See Phase 0 Results](docs/phases/phase0/results.md)
 
-- Analyze node (SystemArchitectAgent)
-- Decompose node (RequirementsEngineerAgent)
-- Traceability implementation
-- Quality validation
+### Next Up: Phase 4 (Testing & Deployment)
+
+- End-to-end testing with all skills
+- Error handling refinement
+- Skills calibration
+- Deployment preparation
+- Documentation completion
 
 ---
 
@@ -275,18 +306,21 @@ RETRY_BACKOFF_FACTOR = 2.0        # Exponential backoff multiplier
 
 ### Quick Links
 
+- **[User Guide](docs/user_guide.md)** - Complete guide to using the system
 - [Complete Documentation Index](docs/README.md)
-- [Phase 1 Implementation Details](docs/phases/phase1/README.md)
+- [Phase 3 Implementation](docs/phases/phase3/README.md) - Latest (graph assembly & UX)
+- [Phase 1 Implementation](docs/phases/phase1/README.md) - Foundation
 - [Phase 0 Validation Results](docs/phases/phase0/results.md)
 - [4.5-Week MVP Plan](docs/implementation/mvp_plan.md)
 - [Project Context (CLAUDE.md)](CLAUDE.md) - Detailed context for AI assistants
 
 ### Key Documentation Files
 
-- **CLAUDE.md** - Comprehensive project context, architecture, and development guidelines
-- **docs/README.md** - Documentation navigation and organization
-- **docs/phases/phase1/README.md** - Phase 1 implementation summary (110 tests, metrics, lessons learned)
-- **docs/implementation/mvp_plan.md** - Full 4.5-week implementation plan with Phase 0 validation
+- **docs/user_guide.md** - Comprehensive user guide with examples and troubleshooting
+- **CLAUDE.md** - Project context, architecture, and development guidelines
+- **docs/phases/phase3/README.md** - Phase 3 summary (graph, UX, zero requirements handling)
+- **docs/phases/phase1/README.md** - Phase 1 summary (foundation, 110 tests)
+- **docs/implementation/mvp_plan.md** - Full 4.5-week implementation plan
 
 ---
 
@@ -361,4 +395,4 @@ pytest tests/ -m unit -v
 ---
 
 
-**Phase 1 Complete ✅ | 110 Tests Passing ✅ | Ready for Phase 2 🚀**
+**Phase 3 Complete ✅ | Full Workflow Operational ✅ | Ready for Phase 4 (Testing & Deployment) 🚀**

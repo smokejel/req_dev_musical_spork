@@ -142,8 +142,8 @@ def calculate_precision_recall(extracted: List[Dict], expected: List[Dict]) -> D
         "false_negatives": false_negatives
     }
 
-def test_consistency(spec_text: str, skill_content: str, runs: int = 3) -> float:
-    """Test output consistency across multiple runs."""
+def measure_consistency(spec_text: str, skill_content: str, runs: int = 3) -> float:
+    """Measure output consistency across multiple runs (helper function, not a test)."""
 
     results = []
     for i in range(runs):

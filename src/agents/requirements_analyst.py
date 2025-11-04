@@ -57,6 +57,9 @@ class RequirementsAnalystAgent(BaseAgent):
             cleaned = '\n'.join(lines).strip()
 
         try:
+            # Fix escaped curly braces (LLMs sometimes return {{ instead of {)
+            cleaned = cleaned.replace('{{', '{').replace('}}', '}')
+
             parsed = json.loads(cleaned)
 
             # Ensure it's a list

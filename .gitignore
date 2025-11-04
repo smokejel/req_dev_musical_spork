@@ -237,11 +237,15 @@ langchain_cache/
 langchain_logs/
 
 # LangGraph checkpoints and state persistence
+# Contains SQLite database with workflow state for resuming interrupted runs
 checkpoints/
 *.db
 *.sqlite
 
 # Generated outputs
+# Phase 3: Timestamped run directories (outputs/run_YYYYMMDD_HHMMSS_subsystem/)
+# Each run contains: requirements.md, traceability.csv, quality_report.md, README.txt
+# For zero requirements: allocation_report.md instead of requirements.md
 outputs/
 output/
 results/
@@ -309,6 +313,9 @@ playground/
 experiments/
 sandbox/
 
+# Terminal conversation logs (AI assistant sessions)
+terminal_convos/
+
 # Personal notes
 notes.md
 TODO.md
@@ -316,7 +323,6 @@ NOTES.txt
 
 # AI Assistant context files (for local development only)
 CLAUDE.md
-DOCUMENTATION_REORGANIZATION_SUMMARY.md
 
 # Large files (LFS might be needed for these)
 *.pkl

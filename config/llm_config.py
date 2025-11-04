@@ -88,13 +88,13 @@ CLAUDE_SONNET_4_5 = ModelConfig(
 )
 
 CLAUDE_SONNET_3_5 = ModelConfig(
-    name="claude-3-5-sonnet-20241022",
+    name="claude-sonnet-4-5-20250929",
     provider=ModelProvider.ANTHROPIC,
     temperature=0.1,
     max_tokens=8192,
     cost_per_1k_input=0.003,
     cost_per_1k_output=0.015,
-    description="Claude 3.5 Sonnet - Strong architectural reasoning"
+    description="Claude Sonnet 4.5 - Strong architectural reasoning"
 )
 
 # Google Models (for future phases)
@@ -148,7 +148,7 @@ NODE_MODELS = {
 
     NodeType.VALIDATE: NodeModelConfig(
         node_type=NodeType.VALIDATE,
-        primary_model=CLAUDE_SONNET_4_5,
+        primary_model=GEMINI_1_5_PRO,
         fallback_models=[CLAUDE_SONNET_3_5, GPT_4O],
         rationale="Critical evaluation and quality assessment. Claude Sonnet 4.5 provides rigorous validation."
     )
