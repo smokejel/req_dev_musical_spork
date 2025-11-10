@@ -12,10 +12,11 @@ The graph includes:
 """
 
 import time
+import sqlite3
 from pathlib import Path
 from typing import Literal, Dict, Any, Callable
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from rich.console import Console
 
 from src.state import DecompositionState
@@ -27,6 +28,84 @@ from src.nodes.human_review_node import human_review_node
 from src.nodes.document_node import document_node
 
 console = Console()
+
+
+def estimate_workflow_cost(state: DecompositionState) -> Dict[str, float]:
+    """
+    Estimate workflow cost based on document size and iterations.
+
+    This provides a rough cost estimate when precise token tracking isn't available.
+    Uses heuristics based on typical token usage patterns.
+
+    Args:
+        state: Final decomposition state
+
+    Returns:
+        Dict with 'total_cost' and 'cost_breakdown' by node
+
+    Note:
+        For precise cost tracking, enable LangSmith integration.
+    """
+    from config.llm_config import (
+        GEMINI_2_5_FLASH_LITE, CLAUDE_SONNET_3_5,
+        GPT_5_NANO, GEMINI_2_5_FLASH
+    )
+
+    # Estimate token usage based on state data
+    extracted_count = len(state.get('extracted_requirements', []))
+    decomposed_count = len(state.get('decomposed_requirements', []))
+    iteration_count = state.get('iteration_count', 0)
+
+    # Cost estimation heuristics (based on observed patterns)
+    # These are rough estimates - actual costs may vary ±30%
+
+    costs = {}
+
+    # Extract node (Gemini 2.5 Flash-Lite)
+    # ~1K input tokens per requirement + 200 output tokens per requirement
+    extract_input_tokens = extracted_count * 1000
+    extract_output_tokens = extracted_count * 200
+    costs['extract'] = (
+        (extract_input_tokens / 1000) * GEMINI_2_5_FLASH_LITE.cost_per_1k_input +
+        (extract_output_tokens / 1000) * GEMINI_2_5_FLASH_LITE.cost_per_1k_output
+    )
+
+    # Analyze node (Claude Sonnet 3.5)
+    # ~5K input tokens + ~2K output tokens
+    analyze_input_tokens = 5000
+    analyze_output_tokens = 2000
+    costs['analyze'] = (
+        (analyze_input_tokens / 1000) * CLAUDE_SONNET_3_5.cost_per_1k_input +
+        (analyze_output_tokens / 1000) * CLAUDE_SONNET_3_5.cost_per_1k_output
+    )
+
+    # Decompose node (GPT-5 Nano) - multiply by iterations
+    # ~3K input tokens per decomposed requirement + 500 output tokens
+    decompose_input_tokens = decomposed_count * 3000 * (iteration_count + 1)
+    decompose_output_tokens = decomposed_count * 500 * (iteration_count + 1)
+    costs['decompose'] = (
+        (decompose_input_tokens / 1000) * GPT_5_NANO.cost_per_1k_input +
+        (decompose_output_tokens / 1000) * GPT_5_NANO.cost_per_1k_output
+    )
+
+    # Validate node (Gemini 2.5 Flash) - multiply by iterations
+    # ~2K input tokens per decomposed requirement + 300 output tokens
+    validate_input_tokens = decomposed_count * 2000 * (iteration_count + 1)
+    validate_output_tokens = decomposed_count * 300 * (iteration_count + 1)
+    costs['validate'] = (
+        (validate_input_tokens / 1000) * GEMINI_2_5_FLASH.cost_per_1k_input +
+        (validate_output_tokens / 1000) * GEMINI_2_5_FLASH.cost_per_1k_output
+    )
+
+    # Document node (minimal cost, mostly I/O)
+    costs['document'] = 0.001  # Negligible
+
+    total_cost = sum(costs.values())
+
+    return {
+        'total_cost': total_cost,
+        'cost_breakdown': costs
+    }
 
 
 def route_after_validation(state: DecompositionState) -> Literal["pass", "revise", "human_review"]:
@@ -198,6 +277,11 @@ def _execute_node_with_progress(
         # Calculate duration
         duration = time.time() - start_time
 
+        # Store timing in state (Phase 4.2 - Observability)
+        timing_breakdown = result.get('timing_breakdown', {})
+        timing_breakdown[node_name] = duration
+        result['timing_breakdown'] = timing_breakdown
+
         # Success message with context-specific details
         details = _get_node_completion_details(node_name, result)
         console.print(f"[green]  ✓ {details} ({duration:.1f}s)[/green]")
@@ -291,16 +375,20 @@ def create_decomposition_graph() -> StateGraph:
     # Document generation ends workflow
     workflow.add_edge("document", END)
 
-    # Set up state persistence with in-memory checkpointing
-    # Note: For production use with disk persistence, use SqliteSaver from langgraph-checkpoint-sqlite
-    # For now, using MemorySaver which works for testing and single-session runs
+    # Set up state persistence with disk-based checkpointing (Phase 4.1)
+    # SqliteSaver enables resume functionality and persistent state across sessions
     checkpoint_dir = Path("checkpoints")
     checkpoint_dir.mkdir(exist_ok=True)
 
-    memory = MemorySaver()
+    # Create SQLite connection for checkpointing
+    db_path = str(checkpoint_dir / "decomposition_state.db")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+
+    # Create SqliteSaver with the connection
+    checkpointer = SqliteSaver(conn)
 
     # Compile and return graph
-    return workflow.compile(checkpointer=memory)
+    return workflow.compile(checkpointer=checkpointer)
 
 
 def generate_checkpoint_id(state: DecompositionState) -> str:

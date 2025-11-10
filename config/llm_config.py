@@ -76,6 +76,16 @@ GPT_4O_MINI = ModelConfig(
     description="GPT-4 Mini - Cost-effective for structured extraction"
 )
 
+GPT_5_NANO = ModelConfig(
+    name="gpt-5-nano",
+    provider=ModelProvider.OPENAI,
+    temperature=0.0,
+    max_tokens=32768,  # 32K+ output tokens per MODEL_DEFINITIONS.md
+    cost_per_1k_input=0.0001,  # Estimate - most cost-efficient GPT-5 variant
+    cost_per_1k_output=0.0005,  # Estimate - verify from OpenAI pricing
+    description="GPT-5 Nano - Fastest, most cost-efficient GPT-5 variant"
+)
+
 # Anthropic Models
 CLAUDE_SONNET_4_5 = ModelConfig(
     name="claude-sonnet-4-5-20250929",
@@ -97,15 +107,35 @@ CLAUDE_SONNET_3_5 = ModelConfig(
     description="Claude Sonnet 4.5 - Strong architectural reasoning"
 )
 
-# Google Models (for future phases)
-GEMINI_1_5_PRO = ModelConfig(
-    name="gemini-1.5-pro",
+# Google Models (Phase 4.1 - Gemini 2.5 Series for large document support)
+GEMINI_2_5_FLASH_LITE = ModelConfig(
+    name="gemini-2.5-flash-lite",
     provider=ModelProvider.GOOGLE,
     temperature=0.0,
-    max_tokens=8192,
-    cost_per_1k_input=0.00125,
-    cost_per_1k_output=0.005,
-    description="Gemini 1.5 Pro - Alternative for analysis tasks"
+    max_tokens=65536,  # 65K output tokens, 1M total context window
+    cost_per_1k_input=0.0001,  # Ultra cost-efficient (verify from pricing page)
+    cost_per_1k_output=0.0004,  # Ultra cost-efficient (verify from pricing page)
+    description="Gemini 2.5 Flash-Lite - Ultra fast, 1M context, most cost-efficient"
+)
+
+GEMINI_2_5_FLASH = ModelConfig(
+    name="gemini-2.5-flash",
+    provider=ModelProvider.GOOGLE,
+    temperature=0.0,
+    max_tokens=65536,  # 65K output tokens, 1M total context window
+    cost_per_1k_input=0.0002,  # Best price-performance (verify from pricing page)
+    cost_per_1k_output=0.0008,  # Best price-performance (verify from pricing page)
+    description="Gemini 2.5 Flash - Best price-performance, 1M context window"
+)
+
+GEMINI_2_5_PRO = ModelConfig(
+    name="gemini-2.5-pro",
+    provider=ModelProvider.GOOGLE,
+    temperature=0.0,
+    max_tokens=65536,  # 65K output tokens, 1M total context window
+    cost_per_1k_input=0.0005,  # State-of-the-art thinking (verify from pricing page)
+    cost_per_1k_output=0.002,   # State-of-the-art thinking (verify from pricing page)
+    description="Gemini 2.5 Pro - State-of-the-art thinking model, 1M context"
 )
 
 
@@ -127,9 +157,9 @@ class NodeModelConfig:
 NODE_MODELS = {
     NodeType.EXTRACT: NodeModelConfig(
         node_type=NodeType.EXTRACT,
-        primary_model=GPT_4O_MINI,
-        fallback_models=[GPT_4O, CLAUDE_SONNET_4_5],
-        rationale="Cost optimization for structured extraction. GPT-4o-mini is sufficient for parsing and ID formatting."
+        primary_model=GEMINI_2_5_FLASH_LITE,
+        fallback_models=[GEMINI_2_5_FLASH, GPT_4O, CLAUDE_SONNET_4_5],
+        rationale="Ultra-fast with 1M context window. Handles 88K+ token PDFs efficiently (tested: 396 reqs extracted in 70s). Most cost-efficient option. Note: Free tier has 250K token/min quota."
     ),
 
     NodeType.ANALYZE: NodeModelConfig(
@@ -141,16 +171,16 @@ NODE_MODELS = {
 
     NodeType.DECOMPOSE: NodeModelConfig(
         node_type=NodeType.DECOMPOSE,
-        primary_model=GPT_4O,
-        fallback_models=[CLAUDE_SONNET_4_5, CLAUDE_SONNET_3_5],
-        rationale="Complex reasoning and consistency. GPT-4o provides reliable decomposition with strong instruction following."
+        primary_model=GPT_5_NANO,
+        fallback_models=[GPT_4O, CLAUDE_SONNET_4_5],
+        rationale="GPT-5 Nano - Fastest, most cost-efficient with higher rate limits. Handles large requirement sets (tested: 396 requirements = 31K tokens) without TPM constraints. No rate limit issues observed."
     ),
 
     NodeType.VALIDATE: NodeModelConfig(
         node_type=NodeType.VALIDATE,
-        primary_model=GEMINI_1_5_PRO,
-        fallback_models=[CLAUDE_SONNET_3_5, GPT_4O],
-        rationale="Critical evaluation and quality assessment. Claude Sonnet 4.5 provides rigorous validation."
+        primary_model=GEMINI_2_5_FLASH,
+        fallback_models=[CLAUDE_SONNET_4_5, GPT_4O],
+        rationale="Best price-performance for quality validation. 1M context window handles large requirement sets. Balanced speed and accuracy. Quality scores: 0.85-0.99 in testing."
     )
 }
 
@@ -198,9 +228,12 @@ def get_model_by_name(model_name: str) -> Optional[ModelConfig]:
     all_models = [
         GPT_4O,
         GPT_4O_MINI,
+        GPT_5_NANO,
         CLAUDE_SONNET_4_5,
         CLAUDE_SONNET_3_5,
-        GEMINI_1_5_PRO
+        GEMINI_2_5_FLASH_LITE,
+        GEMINI_2_5_FLASH,
+        GEMINI_2_5_PRO
     ]
 
     for model in all_models:

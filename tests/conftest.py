@@ -7,6 +7,11 @@ This module provides reusable test fixtures for all test files.
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file for all tests
+# This is especially important for integration tests that need API keys
+load_dotenv()
 
 from src.state import (
     Requirement,

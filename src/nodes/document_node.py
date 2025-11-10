@@ -168,10 +168,16 @@ Generated Files:
 
         console.print("\n" + "=" * 80 + "\n")
 
+        # Estimate workflow cost (Phase 4.2 - Observability)
+        from src.graph import estimate_workflow_cost
+        cost_data = estimate_workflow_cost(state)
+
         # Return updated state
         return {
             **state,
             'final_document_path': req_doc_path,
+            'total_cost': cost_data['total_cost'],
+            'cost_breakdown': cost_data['cost_breakdown'],
             'errors': errors,
             'error_log': error_log
         }
@@ -335,9 +341,15 @@ See allocation_report.md for details and next steps.
     console.print(f"[bold]Run Info:[/bold] {output_dir / 'README.txt'}")
     console.print("\n" + "=" * 80 + "\n")
 
+    # Estimate workflow cost (Phase 4.2 - Observability)
+    from src.graph import estimate_workflow_cost
+    cost_data = estimate_workflow_cost(state)
+
     return {
         **state,
         'final_document_path': str(report_path),
+        'total_cost': cost_data['total_cost'],
+        'cost_breakdown': cost_data['cost_breakdown'],
         'errors': errors,
         'error_log': error_log
     }

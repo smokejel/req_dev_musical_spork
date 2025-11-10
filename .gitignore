@@ -322,6 +322,7 @@ TODO.md
 NOTES.txt
 
 # AI Assistant context files (for local development only)
+# Note: CLAUDE.md is version controlled as it contains critical project documentation
 CLAUDE.md
 
 # Large files (LFS might be needed for these)

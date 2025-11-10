@@ -64,6 +64,7 @@ def validate_node(state: DecompositionState) -> DecompositionState:
         if not decomposed_requirements:
             # Return successful validation with perfect scores
             # This indicates correct allocation: no requirements matched the subsystem
+            iteration_count = state.get('iteration_count', 0)
             return {
                 **state,
                 'quality_metrics': {
@@ -76,6 +77,7 @@ def validate_node(state: DecompositionState) -> DecompositionState:
                     'issues': []
                 },
                 'validation_passed': True,
+                'iteration_count': iteration_count,
                 'validation_issues': [],
                 'errors': errors,
                 'error_log': error_log
@@ -155,7 +157,8 @@ def validate_node(state: DecompositionState) -> DecompositionState:
         )
 
         # Step 4: Generate refinement feedback if failed
-        refinement_feedback = None
+        # Preserve previous feedback if validation passes (for audit trail)
+        refinement_feedback = state.get('refinement_feedback')
         if not validation_passed:
             try:
                 refinement_feedback = agent.generate_refinement_feedback(
@@ -176,6 +179,10 @@ def validate_node(state: DecompositionState) -> DecompositionState:
         # Step 5: Determine if human review is required
         iteration_count = state.get('iteration_count', 0)
         max_iterations = state.get('max_iterations', 3)
+
+        # Increment iteration count when validation fails and we'll retry
+        if not validation_passed:
+            iteration_count += 1
 
         requires_human_review = determine_human_review_required(
             quality_metrics=quality_metrics,
@@ -202,6 +209,7 @@ def validate_node(state: DecompositionState) -> DecompositionState:
             **state,
             'quality_metrics': quality_metrics_dict,
             'validation_passed': validation_passed,
+            'iteration_count': iteration_count,
             'refinement_feedback': refinement_feedback,
             'validation_issues': validation_issues_list,
             'requires_human_review': requires_human_review,

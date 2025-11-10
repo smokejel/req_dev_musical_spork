@@ -364,6 +364,21 @@ class DecompositionState(TypedDict, total=False):
     error_log: List[Dict[str, Any]]
     """Detailed error tracking (serialized ErrorLog objects)"""
 
+    # ========================================================================
+    # Cost Tracking & Performance Monitoring (Phase 4.2 - Observability)
+    # ========================================================================
+    total_cost: float
+    """Total cost in USD for entire workflow"""
+
+    cost_breakdown: Dict[str, float]
+    """Cost per node in USD (e.g., {'extract': 0.05, 'analyze': 0.12, ...})"""
+
+    timing_breakdown: Dict[str, float]
+    """Execution time per node in seconds (e.g., {'extract': 12.3, 'analyze': 8.7, ...})"""
+
+    token_usage: Dict[str, Dict[str, int]]
+    """Token usage per node (e.g., {'extract': {'input': 5000, 'output': 1200}, ...})"""
+
 
 # ============================================================================
 # Helper Functions
@@ -400,5 +415,10 @@ def create_initial_state(
         errors=[],
         error_log=[],
         validation_passed=False,
-        requires_human_review=False
+        requires_human_review=False,
+        # Phase 4.2: Observability fields
+        total_cost=0.0,
+        cost_breakdown={},
+        timing_breakdown={},
+        token_usage={}
     )

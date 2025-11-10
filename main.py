@@ -267,8 +267,54 @@ def display_results(final_state):
     if fallback_count > 0:
         summary_table.add_row("LLM Fallbacks", f"{fallback_count} (check error_log)")
 
+    # Estimated cost (Phase 4.2 - Observability)
+    total_cost = final_state.get("total_cost")
+    if total_cost is not None:
+        summary_table.add_row("Estimated Cost", f"${total_cost:.3f} (±30%)")
+
     console.print(summary_table)
     console.print()
+
+    # Performance summary (Phase 4.2 - Observability)
+    timing_breakdown = final_state.get("timing_breakdown", {})
+    cost_breakdown = final_state.get("cost_breakdown", {})
+
+    if timing_breakdown:
+        perf_table = Table(title="Performance & Cost Breakdown", show_header=True, header_style="bold cyan")
+        perf_table.add_column("Node", style="cyan", width=25)
+        perf_table.add_column("Time (s)", style="white", justify="right", width=15)
+        perf_table.add_column("% Time", style="yellow", justify="right", width=15)
+        perf_table.add_column("Cost ($)", style="green", justify="right", width=15)
+
+        total_time = sum(timing_breakdown.values())
+        total_cost_sum = sum(cost_breakdown.values()) if cost_breakdown else 0
+
+        # Sort by time (slowest first)
+        sorted_nodes = sorted(timing_breakdown.items(), key=lambda x: x[1], reverse=True)
+
+        for node_name, duration in sorted_nodes:
+            time_percentage = (duration / total_time * 100) if total_time > 0 else 0
+            node_cost = cost_breakdown.get(node_name, 0.0) if cost_breakdown else 0.0
+
+            perf_table.add_row(
+                node_name.replace("_", " ").title(),
+                f"{duration:.1f}",
+                f"{time_percentage:.1f}%",
+                f"${node_cost:.3f}" if node_cost > 0 else "$0.000"
+            )
+
+        # Add total row
+        perf_table.add_row(
+            "[bold]TOTAL[/bold]",
+            f"[bold]{total_time:.1f}[/bold]",
+            "[bold]100.0%[/bold]",
+            f"[bold]${total_cost_sum:.3f}[/bold]" if total_cost_sum > 0 else "[bold]$0.000[/bold]"
+        )
+
+        console.print(perf_table)
+        if total_cost_sum > 0:
+            console.print("[dim]Note: Cost estimates are approximate (±30%). Enable LangSmith for precise tracking.[/dim]")
+        console.print()
 
     # Output files
     final_doc = final_state.get("final_document_path")

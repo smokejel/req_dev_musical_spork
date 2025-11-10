@@ -346,6 +346,7 @@ llm = ChatGoogleGenerativeAI(
 - **Claude Docs:** https://docs.anthropic.com/en/docs/about-claude/models
 - **OpenAI Docs:** https://platform.openai.com/docs/models
 - **Gemini Docs:** https://ai.google.dev/gemini-api/docs/models
+- **Gemini Pricing:** https://ai.google.dev/gemini-api/docs/pricing
 - **Claude Deprecations:** https://docs.anthropic.com/en/docs/about-claude/model-deprecations
 - **OpenAI Deprecations:** https://platform.openai.com/docs/deprecations
 

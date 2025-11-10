@@ -1,0 +1,73 @@
+Power Management Subsystem - Requirements Specification
+========================================================
+
+Version: 1.0
+Date: November 4, 2025
+Subsystem: Power Management
+
+
+1. INTRODUCTION
+---------------
+
+This document specifies the requirements for the Power Management subsystem
+of the distributed control system. The Power Management subsystem is
+responsible for monitoring, distributing, and managing electrical power
+across all system components.
+
+
+2. FUNCTIONAL REQUIREMENTS
+---------------------------
+
+PWR-FUNC-001: The Power Management subsystem shall monitor battery voltage
+levels with a resolution of 0.1V.
+
+PWR-FUNC-002: The Power Management subsystem shall switch between primary
+and backup power sources within 50 milliseconds when primary power fails.
+
+PWR-FUNC-003: The Power Management subsystem shall provide regulated 5V,
+12V, and 24V outputs to connected subsystems with ±2% tolerance.
+
+PWR-FUNC-004: The Power Management subsystem shall log all power state
+changes to the system event log with timestamps accurate to 1 millisecond.
+
+
+3. PERFORMANCE REQUIREMENTS
+----------------------------
+
+PWR-PERF-001: The Power Management subsystem shall respond to low-battery
+warnings within 100 milliseconds of detection.
+
+PWR-PERF-002: The Power Management subsystem shall maintain power
+distribution efficiency of at least 92% under normal operating conditions.
+
+
+4. SAFETY REQUIREMENTS
+-----------------------
+
+PWR-SAFE-001: The Power Management subsystem shall implement over-current
+protection that trips within 10 milliseconds when current exceeds 110%
+of rated capacity.
+
+PWR-SAFE-002: The Power Management subsystem shall initiate a controlled
+shutdown sequence when battery level falls below 5% capacity.
+
+
+5. INTERFACE REQUIREMENTS
+--------------------------
+
+PWR-INTF-001: The Power Management subsystem shall provide power status
+information to the Central Controller via CAN bus at 1 Hz update rate.
+
+PWR-INTF-002: The Power Management subsystem shall accept power management
+commands from the Central Controller with command acknowledgment within
+50 milliseconds.
+
+
+END OF POWER MANAGEMENT REQUIREMENTS
+=====================================
+
+NOTE: This specification is specifically for the Power Management subsystem.
+When tested against a different target subsystem (e.g., "Navigation"), the
+system should correctly identify zero requirements allocated and generate
+an allocation report explaining why no requirements apply to the target
+subsystem.

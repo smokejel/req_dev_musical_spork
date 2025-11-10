@@ -13,6 +13,7 @@ from enum import Enum
 
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models import BaseChatModel
 
 from src.utils.skill_loader import load_skill, SkillLoadError
@@ -132,9 +133,10 @@ class BaseAgent(ABC):
                 )
 
             elif model_config.provider == ModelProvider.GOOGLE:
-                # Future: Import ChatGoogleGenerativeAI
-                raise AgentError(
-                    f"Google models not yet supported. Model: {model_config.name}"
+                return ChatGoogleGenerativeAI(
+                    model=model_config.name,
+                    temperature=model_config.temperature,
+                    max_output_tokens=model_config.max_tokens
                 )
 
             else:
