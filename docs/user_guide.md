@@ -1,7 +1,7 @@
 # Requirements Decomposition System - User Guide
 
-**Version:** 1.0.0 (Phase 3 Complete)
-**Last Updated:** 2025-11-02
+**Version:** 1.1.0 (Phase 4 Complete - MVP Production-Ready)
+**Last Updated:** 2025-11-09
 
 ## Table of Contents
 
@@ -12,13 +12,14 @@
 5. [Command-Line Options](#command-line-options)
 6. [Input Specification Format](#input-specification-format)
 7. [Understanding Output](#understanding-output)
-8. [Workflow Stages](#workflow-stages)
-9. [Quality Metrics](#quality-metrics)
-10. [Human Review](#human-review)
-11. [Troubleshooting](#troubleshooting)
-12. [Best Practices](#best-practices)
-13. [Examples](#examples)
-14. [FAQ](#faq)
+8. [Understanding Performance & Cost](#understanding-performance--cost) **NEW**
+9. [Workflow Stages](#workflow-stages)
+10. [Quality Metrics](#quality-metrics)
+11. [Human Review](#human-review)
+12. [Troubleshooting](#troubleshooting)
+13. [Best Practices](#best-practices)
+14. [Examples](#examples)
+15. [FAQ](#faq)
 
 ---
 
@@ -459,6 +460,215 @@ contain requirements applicable to this subsystem.
 **Note:** This is not an error. The system correctly determined that no requirements
 from the specification apply to the Navigation subsystem.
 ```
+
+---
+
+## Understanding Performance & Cost
+
+**New in Phase 4.2:** Real-time performance monitoring and cost tracking
+
+### Performance Monitoring
+
+Every workflow run displays detailed performance metrics showing timing breakdown per node:
+
+```
+Performance & Cost Breakdown
+┌───────────────────────────┬─────────────────┬─────────────────┬─────────────────┐
+│ Node                      │        Time (s) │          % Time │        Cost ($) │
+├───────────────────────────┼─────────────────┼─────────────────┼─────────────────┤
+│ Decompose                 │            25.2 │           55.8% │          $0.000 │
+│ Analyze                   │            17.9 │           39.5% │          $0.045 │
+│ Extract                   │             2.1 │            4.6% │          $0.002 │
+│ Document                  │             0.0 │            0.0% │          $0.001 │
+│ Validate                  │             0.0 │            0.0% │          $0.000 │
+│ TOTAL                     │            45.2 │          100.0% │          $0.048 │
+└───────────────────────────┴─────────────────┴─────────────────┴─────────────────┘
+Note: Cost estimates are approximate (±30%). Enable LangSmith for precise tracking.
+```
+
+### Interpreting Timing Breakdown
+
+**Column Descriptions:**
+- **Node:** Workflow stage (Extract, Analyze, Decompose, Validate, Document)
+- **Time (s):** Execution duration in seconds
+- **% Time:** Percentage of total workflow time
+- **Cost ($):** Estimated LLM API cost
+
+**Typical Timing Patterns:**
+
+**Small Documents (5-10 requirements):**
+```
+Extract:    2-5s    (10%)
+Analyze:   10-20s   (40%)
+Decompose: 10-20s   (40%)
+Validate:   2-5s    (10%)
+Document:   <1s     (0%)
+Total:     25-50s
+```
+
+**Large Documents (30-50 requirements):**
+```
+Extract:   5-15s    (10%)
+Analyze:  30-60s    (40%)
+Decompose: 30-60s   (45%)
+Validate:  5-10s    (5%)
+Document:  <1s      (0%)
+Total:    70-150s
+```
+
+**Bottleneck Identification:**
+- **Decompose >50%:** Complex decomposition, many requirements
+- **Analyze >50%:** Complex system context, intricate architecture
+- **Extract >20%:** Large PDF/DOCX parsing, many requirements
+- **Validate >10%:** Quality refinement loop active (multiple iterations)
+
+### Cost Estimation
+
+**How Cost Estimation Works:**
+
+The system uses heuristic-based calculation to estimate LLM API costs:
+
+1. **Token Estimation:**
+   - Input tokens ≈ document size + skill size + context
+   - Output tokens ≈ number of requirements × average requirement length
+
+2. **Model Pricing:**
+   - Each model has configured cost per 1K tokens (input/output)
+   - Extract: Gemini 2.5 Flash-Lite ($0.0001/$0.0004 per 1K)
+   - Analyze: Claude Sonnet 3.5 ($0.003/$0.015 per 1K)
+   - Decompose: GPT-5 Nano ($0.0002/$0.0008 per 1K)
+   - Validate: Gemini 2.5 Flash ($0.0002/$0.0008 per 1K)
+
+3. **Calculation:**
+   ```
+   cost = (input_tokens / 1000) × input_price +
+          (output_tokens / 1000) × output_price
+   ```
+
+**Accuracy:**
+- **±30% typical** - heuristic estimation without precise token counting
+- Enable LangSmith for exact token counts and costs
+
+**Typical Costs per Run:**
+
+| Document Size | Requirements | Typical Cost | Range |
+|---------------|-------------|--------------|-------|
+| Small (5-10) | 5-15 | $0.01-0.05 | $0.005-$0.10 |
+| Medium (10-30) | 15-40 | $0.05-0.15 | $0.03-$0.25 |
+| Large (30-100) | 40-100 | $0.15-0.50 | $0.10-$1.00 |
+
+**Cost Factors:**
+- **Document size** - larger specs = more input tokens
+- **Number of requirements** - more requirements = more output tokens
+- **Refinement iterations** - quality loop adds decompose + validate costs
+- **Model selection** - Claude Sonnet costs more than Gemini/GPT-5 Nano
+
+### Budget Management
+
+**Monitoring Costs:**
+
+1. **Check Per-Run Estimates:**
+   - Displayed in Results Summary after each run
+   - Shown in Performance & Cost Breakdown table
+
+2. **Track Over Time:**
+   - Save terminal output to log files
+   - Parse cost estimates from logs
+   - Sum across multiple runs
+
+3. **Enable LangSmith (Optional):**
+   - Precise token counting
+   - Exact cost tracking
+   - Historical cost analysis
+
+**Example:**
+```bash
+# Save run output with cost info
+python main.py spec.txt --subsystem "Nav" 2>&1 | tee run_log.txt
+
+# Check cost estimate
+grep "Estimated Cost" run_log.txt
+```
+
+**Controlling Costs:**
+
+1. **Choose Appropriate Models:**
+   - Current config optimized for cost-performance balance
+   - Gemini 2.5 Flash-Lite (extract) is most cost-efficient
+   - GPT-5 Nano (decompose) has no TPM limits
+
+2. **Optimize Quality Threshold:**
+   - Higher threshold → more iterations → higher cost
+   - Start with 0.80 (default), adjust based on results
+
+3. **Use Smaller Documents:**
+   - Break large specs into smaller sections
+   - Process one subsystem at a time
+
+4. **Limit Iterations:**
+   - Default max_iterations = 3
+   - Reduce if budget-constrained: `--max-iterations 1`
+
+### Performance Optimization Tips
+
+**Reduce Extract Time:**
+- Use .txt format instead of .pdf/.docx
+- Smaller documents parse faster
+- Split large specs into sections
+
+**Reduce Analyze Time:**
+- Simplify system architecture descriptions
+- Focus on relevant subsystems only
+- Provide clear subsystem boundaries
+
+**Reduce Decompose Time:**
+- Better input specs = less LLM reasoning time
+- Clear allocation rules = faster filtering
+- Fewer requirements = faster decomposition
+
+**Reduce Validate Time:**
+- Higher quality inputs = fewer iterations
+- Appropriate threshold = less refinement
+- Clear requirements = faster scoring
+
+### LangSmith Integration (Optional)
+
+For **precise** performance and cost tracking, enable LangSmith:
+
+**Setup:**
+
+1. Create account at https://smith.langchain.com
+2. Get API key from dashboard
+3. Add to `.env`:
+
+```bash
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+LANGCHAIN_API_KEY=your-langsmith-key
+LANGCHAIN_PROJECT=requirements-decomposition
+```
+
+**Benefits:**
+- **Exact token counts** - precise input/output tokens per call
+- **Actual costs** - calculated from real token usage
+- **Trace visualization** - see full LLM call chain
+- **Performance analysis** - identify slow API calls
+- **Historical tracking** - compare runs over time
+
+**Cost:**
+- Free tier: 5K traces/month
+- Paid tier: $39/month for 50K traces
+
+**When to Use:**
+- Production deployments
+- Cost-sensitive projects
+- Performance optimization
+- Team collaboration
+
+**When Not Needed:**
+- MVP testing
+- Occasional use
+- ±30% accuracy acceptable
 
 ---
 
@@ -1425,6 +1635,6 @@ Contributions welcome! See `CONTRIBUTING.md` for guidelines.
 
 ---
 
-**Last Updated:** 2025-11-02
-**Version:** 1.0.0 (Phase 3 Complete)
-**Status:** Production Ready
+**Last Updated:** 2025-11-09
+**Version:** 1.1.0 (Phase 4 Complete - MVP Production-Ready)
+**Status:** Production Ready with Observability
