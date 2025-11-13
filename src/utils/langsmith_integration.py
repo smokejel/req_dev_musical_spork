@@ -169,6 +169,152 @@ class LangSmithTracker:
         except Exception:
             return 'unknown'
 
+    def get_workflow_costs(
+        self,
+        workflow_run_id: str,
+        max_wait_seconds: int = 15,
+        project_name: Optional[str] = None
+    ) -> Optional[Dict[str, any]]:
+        """
+        Get aggregated costs for a complete workflow run by querying all child runs.
+
+        This method waits for the workflow run to complete, then fetches all
+        child LLM calls and aggregates their token usage.
+
+        Args:
+            workflow_run_id: LangSmith run ID for the workflow execution
+            max_wait_seconds: Maximum time to wait for traces to be available
+            project_name: Project name (default: from config)
+
+        Returns:
+            Dictionary with aggregated token counts and costs per node, or None if unavailable
+        """
+        if not self.active:
+            return None
+
+        try:
+            if project_name is None:
+                project_name = ObservabilityConfig.LANGSMITH_PROJECT
+
+            # Wait for traces to be fully processed
+            time.sleep(2)  # Initial delay for trace processing
+
+            start_time = time.time()
+            workflow_run = None
+
+            # Wait for workflow run to complete
+            while time.time() - start_time < max_wait_seconds:
+                try:
+                    workflow_run = self.client.read_run(workflow_run_id)
+                    if workflow_run.end_time is not None:
+                        break
+                except Exception:
+                    pass
+                time.sleep(1)
+
+            if workflow_run is None:
+                return None
+
+            # Fetch all child runs (LLM calls within the workflow)
+            child_runs = list(self.client.list_runs(
+                project_name=project_name,
+                trace_id=workflow_run.trace_id
+            ))
+
+            # Aggregate tokens by node
+            node_costs = {}
+            total_input_tokens = 0
+            total_output_tokens = 0
+
+            for run in child_runs:
+                # Only process LLM runs
+                run_type = run.run_type if hasattr(run, 'run_type') else 'unknown'
+                if run_type != 'llm':
+                    continue
+
+                # LangSmith stores token data in the 'prompt_tokens' and 'completion_tokens' fields
+                # These are top-level attributes on the run object for LLM runs
+                input_tokens = 0
+                output_tokens = 0
+
+                # Check top-level fields (this is where LangSmith stores LLM token data)
+                if hasattr(run, 'prompt_tokens') and run.prompt_tokens:
+                    input_tokens = run.prompt_tokens
+
+                if hasattr(run, 'completion_tokens') and run.completion_tokens:
+                    output_tokens = run.completion_tokens
+
+                # Fallback: Try total_tokens if available
+                if input_tokens == 0 and output_tokens == 0:
+                    if hasattr(run, 'total_tokens') and run.total_tokens:
+                        # Estimate split (typically ~75% input, 25% output)
+                        total = run.total_tokens
+                        input_tokens = int(total * 0.75)
+                        output_tokens = int(total * 0.25)
+
+                if input_tokens > 0 or output_tokens > 0:
+                    # Extract node name from parent run or run name
+                    node_name = self._extract_node_name(run)
+
+                    if node_name not in node_costs:
+                        node_costs[node_name] = {'input_tokens': 0, 'output_tokens': 0}
+
+                    node_costs[node_name]['input_tokens'] += input_tokens
+                    node_costs[node_name]['output_tokens'] += output_tokens
+
+                    total_input_tokens += input_tokens
+                    total_output_tokens += output_tokens
+
+            return {
+                'workflow_run_id': str(workflow_run_id),
+                'total_input_tokens': total_input_tokens,
+                'total_output_tokens': total_output_tokens,
+                'total_tokens': total_input_tokens + total_output_tokens,
+                'node_costs': node_costs,
+                'child_runs_count': len([r for r in child_runs if hasattr(r, 'outputs') and r.outputs])
+            }
+
+        except Exception as e:
+            print(f"Warning: Failed to get workflow costs from LangSmith: {e}")
+            return None
+
+    def _extract_node_name(self, run) -> str:
+        """Extract node name from LangSmith run."""
+        try:
+            # For LLM runs, we need to look at the parent run (the node that called the LLM)
+            # LangSmith API provides parent_run_id
+            if hasattr(run, 'parent_run_id') and run.parent_run_id:
+                try:
+                    parent_run = self.client.read_run(str(run.parent_run_id))
+                    if hasattr(parent_run, 'name'):
+                        parent_name = parent_run.name.lower()
+                        # Check if parent name matches a node
+                        for node in ['extract', 'analyze', 'decompose', 'validate']:
+                            if node in parent_name:
+                                return node
+                except Exception:
+                    pass  # Failed to fetch parent, try fallbacks
+
+            # Fallback: Try from run name
+            if hasattr(run, 'name'):
+                name = run.name.lower()
+                for node in ['extract', 'analyze', 'decompose', 'validate']:
+                    if node in name:
+                        return node
+
+            # Try from tags
+            if hasattr(run, 'tags') and run.tags:
+                for tag in run.tags:
+                    tag_lower = tag.lower()
+                    for node in ['extract', 'analyze', 'decompose', 'validate']:
+                        if node in tag_lower:
+                            return node
+
+            return 'unknown'
+
+        except Exception:
+            return 'unknown'
+
     def get_aggregate_costs(
         self,
         project_name: Optional[str] = None,

@@ -433,7 +433,16 @@ def main():
         # Execute graph (nodes provide their own progress output)
         # No spinner here to avoid interfering with human review prompts
         config = {"configurable": {"thread_id": checkpoint_id}}
-        final_state = graph.invoke(initial_state, config=config)
+
+        # Track run ID for LangSmith cost fetching
+        from langchain_core.tracers.context import collect_runs
+
+        with collect_runs() as cb:
+            final_state = graph.invoke(initial_state, config=config)
+            langsmith_run_id = None
+            if cb.traced_runs:
+                # Get the root run ID (workflow execution)
+                langsmith_run_id = str(cb.traced_runs[0].id)
 
         if not args.quiet:
             console.print("\n[dim]Workflow execution complete[/dim]")
@@ -441,9 +450,63 @@ def main():
         # Finalize cost tracking (Phase 5.1)
         if ObservabilityConfig.COST_TRACKING_ENABLED:
             cost_tracker = get_cost_tracker()
+
+            # Try to fetch actual costs from LangSmith if available
+            langsmith_costs = None
+            if LANGSMITH_ACTIVE and langsmith_run_id:
+                from src.utils.langsmith_integration import get_langsmith_tracker
+                langsmith_tracker = get_langsmith_tracker()
+
+                if not args.quiet:
+                    console.print("[dim]Fetching cost data from LangSmith...[/dim]")
+
+                langsmith_costs = langsmith_tracker.get_workflow_costs(
+                    workflow_run_id=langsmith_run_id,
+                    max_wait_seconds=15
+                )
+
+                if langsmith_costs:
+                    # Replace heuristic costs with LangSmith actuals
+                    from config.llm_config import get_primary_model, NodeType
+
+                    for node_name, token_data in langsmith_costs['node_costs'].items():
+                        input_tokens = token_data['input_tokens']
+                        output_tokens = token_data['output_tokens']
+
+                        # Determine node type for cost calculation
+                        try:
+                            node_type = NodeType(node_name)
+                            model_config = get_primary_model(node_type)
+                        except:
+                            # Use a default if node type unknown
+                            continue
+
+                        # Calculate cost
+                        cost = cost_tracker.calculate_node_cost(
+                            node_type,
+                            input_tokens,
+                            output_tokens,
+                            model_config
+                        )
+
+                        # Update tracker with actual data
+                        cost_tracker.record_node_cost(
+                            node_name=node_name,
+                            cost=cost,
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            model_name=model_config.name
+                        )
+
+                    if not args.quiet:
+                        console.print(f"[dim]✓ Retrieved {langsmith_costs['total_tokens']} tokens from LangSmith[/dim]")
+                        console.print("[green]✓ Costs calculated from LangSmith traces (precise)[/green]")
+                elif not args.quiet:
+                    console.print("[yellow]⚠ Could not fetch costs from LangSmith (using heuristic estimates)[/yellow]")
+
             cost_record = cost_tracker.finalize_run(
                 subsystem=args.subsystem,
-                source_method='langsmith' if LANGSMITH_ACTIVE else 'heuristic'
+                source_method='langsmith' if (LANGSMITH_ACTIVE and langsmith_costs) else 'heuristic'
             )
             # Store in final state for display
             final_state['total_cost'] = cost_record.total_cost
