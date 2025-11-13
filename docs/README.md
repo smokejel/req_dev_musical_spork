@@ -1,4 +1,4 @@
-# Requirements Development Agentic Workflow - Documentation
+Requirements Development Agentic Workflow - Documentation
 
 **Project:** req_dev_musical_spork
 **Status:** Phase 0 Complete ✅ | Phase 1 Ready to Begin

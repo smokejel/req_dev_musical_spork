@@ -248,7 +248,5 @@ All documents validated with:
 ---
 
 ## Related Documentation
-
-- [Phase 4.1-4.2 Plan](../../Phase_4.1_4.2_Plan.md)
 - [User Guide](../../docs/user_guide.md)
 - [Integration Test Implementation](../../tests/test_e2e_workflow.py)
