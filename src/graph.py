@@ -18,6 +18,7 @@ from typing import Literal, Dict, Any, Callable
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 from rich.console import Console
+from rich.panel import Panel
 
 from src.state import DecompositionState
 from src.nodes.extract_node import extract_node
@@ -26,6 +27,8 @@ from src.nodes.decompose_node import decompose_node
 from src.nodes.validate_node import validate_node
 from src.nodes.human_review_node import human_review_node
 from src.nodes.document_node import document_node
+from src.utils.cost_tracker import get_cost_tracker
+from config.observability_config import ObservabilityConfig, LANGSMITH_ACTIVE
 
 console = Console()
 
@@ -150,15 +153,22 @@ def route_after_validation(state: DecompositionState) -> Literal["pass", "revise
     return "revise"
 
 
-def route_after_human_review(state: DecompositionState) -> Literal["approved", "revise"]:
+def route_after_human_review(state: DecompositionState) -> Literal["approved", "revise", "decompose"]:
     """
     Route based on human decision after review.
+
+    Context-aware routing:
+    - If decomposition hasn't occurred yet (pre-decomposition review), route to decompose
+    - If decomposition has occurred (post-validation review), route to document
+    - If revision requested, always route to decompose
 
     Args:
         state: Current decomposition state
 
     Returns:
-        "approved" if human approved, "revise" if human requested changes
+        "approved" if human approved post-validation (route to document)
+        "decompose" if human approved pre-decomposition (route to decompose)
+        "revise" if human requested changes
     """
     human_feedback = state.get("human_feedback", "").lower()
 
@@ -168,7 +178,15 @@ def route_after_human_review(state: DecompositionState) -> Literal["approved", "
 
     # Check for approval keywords
     if any(keyword in human_feedback for keyword in ["approve", "accept", "good", "ok"]):
-        return "approved"
+        # Context-aware routing: check if decomposition has occurred
+        decomposed_reqs = state.get("decomposed_requirements", [])
+
+        if not decomposed_reqs:
+            # Pre-decomposition review - route to decompose node
+            return "decompose"
+        else:
+            # Post-validation review - route to document node
+            return "approved"
 
     # Default: revise (safer to assume revision needed if unclear)
     return "revise"
@@ -264,6 +282,18 @@ def _execute_node_with_progress(
 
     display_name = display_names.get(node_name, node_name.title())
 
+    # Check budget before execution (Phase 5.1 - Cost Management)
+    if ObservabilityConfig.COST_TRACKING_ENABLED:
+        cost_tracker = get_cost_tracker()
+        is_ok, warning = cost_tracker.check_budget()
+
+        if not is_ok:
+            console.print(f"\n[bold red]{warning}[/bold red]")
+            raise RuntimeError(f"Budget exceeded: {warning}")
+
+        if warning:
+            console.print(f"[yellow]{warning}[/yellow]")
+
     # Start message
     console.print(f"\n[bold cyan][{node_num}/{total_nodes}] {display_name}...[/bold cyan]")
 
@@ -282,9 +312,17 @@ def _execute_node_with_progress(
         timing_breakdown[node_name] = duration
         result['timing_breakdown'] = timing_breakdown
 
+        # Get current cost for display (Phase 5.1)
+        cost_display = ""
+        if ObservabilityConfig.COST_TRACKING_ENABLED:
+            cost_tracker = get_cost_tracker()
+            current_total = cost_tracker.get_current_total()
+            if current_total > 0:
+                cost_display = f" | ${current_total:.4f}"
+
         # Success message with context-specific details
         details = _get_node_completion_details(node_name, result)
-        console.print(f"[green]  ✓ {details} ({duration:.1f}s)[/green]")
+        console.print(f"[green]  ✓ {details} ({duration:.1f}s{cost_display})[/green]")
 
         return result
 
@@ -367,8 +405,9 @@ def create_decomposition_graph() -> StateGraph:
         "human_review",
         route_after_human_review,
         {
-            "approved": "document",
-            "revise": "decompose"
+            "approved": "document",    # Post-validation approval → document
+            "revise": "decompose",     # Revision request → decompose
+            "decompose": "decompose"   # Pre-decomposition approval → decompose
         }
     )
 

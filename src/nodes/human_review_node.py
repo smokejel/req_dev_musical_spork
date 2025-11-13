@@ -39,9 +39,19 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
         - requires_human_review: Set to False after review
         - (workflow resumes based on feedback)
     """
-    # Display header
+    # Determine review context (pre-decomposition vs post-validation)
+    decomposed_reqs = state.get("decomposed_requirements", [])
+    extracted_reqs = state.get("extracted_requirements", [])
+    is_pre_decomposition = len(decomposed_reqs) == 0 and len(extracted_reqs) > 0
+    is_post_validation = len(decomposed_reqs) > 0
+
+    # Select requirements to display based on context
+    requirements_to_review = extracted_reqs if is_pre_decomposition else decomposed_reqs
+    review_type = "PRE-DECOMPOSITION" if is_pre_decomposition else "POST-VALIDATION"
+
+    # Display header (context-aware)
     console.print("\n" + "=" * 80, style="bold blue")
-    console.print("HUMAN REVIEW REQUIRED", style="bold yellow", justify="center")
+    console.print(f"{review_type} REVIEW REQUIRED", style="bold yellow", justify="center")
     console.print("=" * 80 + "\n", style="bold blue")
 
     # Display iteration context
@@ -51,14 +61,26 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
         f"[yellow]Iteration {iteration_count}/{max_iterations}[/yellow]\n"
     )
 
-    # Display quality metrics if available
+    # Display summary based on context
+    target_subsystem = state.get("target_subsystem", "Unknown")
+    if is_pre_decomposition:
+        console.print(
+            f"[cyan]{len(extracted_reqs)} extracted requirements[/cyan] will be decomposed "
+            f"for subsystem: [bold]{target_subsystem}[/bold]\n"
+        )
+    else:
+        console.print(
+            f"[cyan]{len(decomposed_reqs)} decomposed requirements[/cyan] need review\n"
+        )
+
+    # Display quality metrics if available (post-validation only)
     quality_metrics = state.get("quality_metrics")
-    if quality_metrics:
+    if quality_metrics and is_post_validation:
         _display_quality_metrics(quality_metrics)
 
-    # Display validation issues if available
+    # Display validation issues if available (post-validation only)
     validation_issues = state.get("validation_issues", [])
-    if validation_issues:
+    if validation_issues and is_post_validation:
         _display_validation_issues(validation_issues)
 
     # Display errors if any
@@ -66,15 +88,20 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
     if errors:
         _display_errors(errors)
 
-    # Display subsystem requirements summary
-    subsystem_requirements = state.get("subsystem_requirements", [])
-    if subsystem_requirements:
-        _display_requirements_summary(subsystem_requirements)
+    # Display requirements summary (post-validation only)
+    if is_post_validation and requirements_to_review:
+        _display_requirements_summary(requirements_to_review)
 
     # Get human decision
     console.print("\n" + "-" * 80)
     console.print("[bold]Review Options:[/bold]")
-    console.print("  1. [green]Approve[/green] - Accept requirements as-is and generate documentation")
+
+    # Context-aware menu options
+    if is_pre_decomposition:
+        console.print("  1. [green]Proceed[/green] - Start decomposition with current strategy")
+    else:
+        console.print("  1. [green]Approve[/green] - Accept requirements as-is and generate documentation")
+
     console.print("  2. [yellow]Revise[/yellow] - Send back for revision with feedback")
     console.print("  3. [blue]View Details[/blue] - Inspect specific requirements")
     console.print("  4. [magenta]View Strategy[/magenta] - Review decomposition strategy")
@@ -90,12 +117,18 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
         )
 
         if choice == "1":
-            # Approve
-            confirm = Confirm.ask("[green]Confirm approval?[/green]")
+            # Approve/Proceed (context-aware)
+            if is_pre_decomposition:
+                confirm = Confirm.ask("[green]Proceed with decomposition?[/green]")
+                proceed_message = "\n[green]✓ Proceeding to decomposition.[/green]"
+            else:
+                confirm = Confirm.ask("[green]Confirm approval?[/green]")
+                proceed_message = "\n[green]✓ Requirements approved. Proceeding to documentation generation.[/green]"
+
             if confirm:
                 human_feedback = "approved"
                 decision_approved = True
-                console.print("\n[green]✓ Requirements approved. Proceeding to documentation generation.[/green]")
+                console.print(proceed_message)
                 break
 
         elif choice == "2":
@@ -113,8 +146,11 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
                 console.print("[red]Feedback cannot be empty. Please provide guidance.[/red]")
 
         elif choice == "3":
-            # View details
-            _display_requirements_detail(subsystem_requirements)
+            # View details (context-aware)
+            if is_pre_decomposition:
+                _display_extracted_requirements_detail(extracted_reqs)
+            else:
+                _display_decomposed_requirements_detail(decomposed_reqs)
             continue
 
         elif choice == "4":
@@ -238,9 +274,39 @@ def _display_requirements_summary(requirements: list) -> None:
     console.print()
 
 
-def _display_requirements_detail(requirements: list) -> None:
-    """Display detailed requirement information."""
-    console.print("\n[bold]Subsystem Requirements Detail:[/bold]\n")
+def _display_extracted_requirements_detail(requirements: list) -> None:
+    """Display detailed extracted requirement information (pre-decomposition)."""
+    console.print("\n[bold]Extracted Requirements Detail:[/bold]\n")
+
+    num_to_show = min(10, len(requirements))
+    console.print(f"[dim]Showing first {num_to_show} of {len(requirements)} requirements[/dim]\n")
+
+    for idx, req in enumerate(requirements[:num_to_show], 1):
+        req_id = req.get("id", "UNKNOWN")
+        req_type = req.get("type", "unknown")
+        req_text = req.get("text", "")
+        source_section = req.get("source_section", "N/A")
+
+        panel = Panel(
+            f"[cyan]ID:[/cyan] {req_id}\n"
+            f"[cyan]Type:[/cyan] {req_type}\n"
+            f"[cyan]Text:[/cyan] {req_text}\n"
+            f"[cyan]Source Section:[/cyan] {source_section}",
+            title=f"[bold]Extracted Requirement {idx}/{num_to_show}[/bold]",
+            border_style="blue"
+        )
+        console.print(panel)
+
+    if len(requirements) > num_to_show:
+        console.print(f"\n[dim]... and {len(requirements) - num_to_show} more requirements[/dim]\n")
+
+    console.print("[yellow]Press Enter to return to review options...[/yellow]")
+    input()
+
+
+def _display_decomposed_requirements_detail(requirements: list) -> None:
+    """Display detailed decomposed requirement information (post-validation)."""
+    console.print("\n[bold]Decomposed Requirements Detail:[/bold]\n")
 
     num_to_show = min(10, len(requirements))
     console.print(f"[dim]Showing first {num_to_show} of {len(requirements)} requirements[/dim]\n")

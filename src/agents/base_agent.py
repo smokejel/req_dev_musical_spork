@@ -17,6 +17,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models import BaseChatModel
 
 from src.utils.skill_loader import load_skill, SkillLoadError
+from src.utils.langsmith_integration import extract_tokens_from_response
+from src.utils.cost_tracker import get_cost_tracker
 from src.state import ErrorType, ErrorLog
 from config.llm_config import (
     ModelConfig,
@@ -29,6 +31,7 @@ from config.llm_config import (
     RETRY_BACKOFF_FACTOR,
     RETRY_MAX_DELAY
 )
+from config.observability_config import ObservabilityConfig
 
 
 class AgentError(Exception):
@@ -235,6 +238,53 @@ class BaseAgent(ABC):
         )
         self.error_log.append(error_entry)
 
+    def _track_cost(
+        self,
+        response: Any,
+        model_config: ModelConfig
+    ) -> Optional[float]:
+        """
+        Track cost for an LLM response.
+
+        Args:
+            response: LLM response object
+            model_config: Model configuration used
+
+        Returns:
+            Cost in dollars, or None if tracking disabled
+        """
+        if not ObservabilityConfig.COST_TRACKING_ENABLED:
+            return None
+
+        try:
+            # Extract token counts from response
+            input_tokens, output_tokens = extract_tokens_from_response(response)
+
+            # Calculate cost
+            cost_tracker = get_cost_tracker()
+            cost = cost_tracker.calculate_node_cost(
+                self.node_type,
+                input_tokens,
+                output_tokens,
+                model_config
+            )
+
+            # Record in tracker
+            cost_tracker.record_node_cost(
+                node_name=self.node_type.value,
+                cost=cost,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                model_name=model_config.name
+            )
+
+            return cost
+
+        except Exception as e:
+            # Don't fail execution if cost tracking fails
+            print(f"Warning: Cost tracking failed: {e}")
+            return None
+
     def _retry_with_backoff(
         self,
         func: Callable[[], Any],
@@ -308,6 +358,10 @@ class BaseAgent(ABC):
         try:
             llm = self.get_llm(use_primary=True)
             result = self._retry_with_backoff(lambda: execution_func(llm))
+
+            # Track cost for successful execution
+            self._track_cost(result, self.primary_model_config)
+
             return result
 
         except Exception as primary_error:
@@ -342,6 +396,9 @@ class BaseAgent(ABC):
                 try:
                     llm = self.get_llm(use_primary=False)
                     result = self._retry_with_backoff(lambda: execution_func(llm))
+
+                    # Track cost for fallback execution
+                    self._track_cost(result, self.fallback_model_configs[0])
 
                     # Log successful fallback
                     self._log_error(

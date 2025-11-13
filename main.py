@@ -31,9 +31,18 @@ from rich.table import Table
 
 from src.graph import create_decomposition_graph, generate_checkpoint_id, get_graph_visualization
 from src.state import create_initial_state
+from src.utils.cost_tracker import get_cost_tracker
+from src.utils.quality_tracker import get_quality_tracker
+from config.observability_config import ObservabilityConfig, LANGSMITH_ACTIVE
 from dotenv import load_dotenv
 load_dotenv()
 console = Console()
+
+# Display LangSmith status on startup
+if LANGSMITH_ACTIVE:
+    console.print("[dim]✓ LangSmith tracing enabled[/dim]", style="green")
+elif ObservabilityConfig.COST_TRACKING_ENABLED:
+    console.print("[dim]✓ Cost tracking enabled (heuristic mode)[/dim]", style="yellow")
 
 
 def parse_arguments():
@@ -267,10 +276,11 @@ def display_results(final_state):
     if fallback_count > 0:
         summary_table.add_row("LLM Fallbacks", f"{fallback_count} (check error_log)")
 
-    # Estimated cost (Phase 4.2 - Observability)
+    # Cost tracking (Phase 5.1 - Enhanced Observability)
     total_cost = final_state.get("total_cost")
     if total_cost is not None:
-        summary_table.add_row("Estimated Cost", f"${total_cost:.3f} (±30%)")
+        cost_source = "LangSmith" if LANGSMITH_ACTIVE else "Heuristic (±30%)"
+        summary_table.add_row("Total Cost", f"${total_cost:.4f} ({cost_source})")
 
     console.print(summary_table)
     console.print()
@@ -313,7 +323,10 @@ def display_results(final_state):
 
         console.print(perf_table)
         if total_cost_sum > 0:
-            console.print("[dim]Note: Cost estimates are approximate (±30%). Enable LangSmith for precise tracking.[/dim]")
+            if LANGSMITH_ACTIVE:
+                console.print("[dim]✓ Costs calculated from LangSmith traces (precise)[/dim]")
+            else:
+                console.print("[dim]Note: Cost estimates are heuristic-based (±30%). Enable LangSmith for precise tracking.[/dim]")
         console.print()
 
     # Output files
@@ -400,6 +413,13 @@ def main():
         if not args.quiet:
             console.print(f"[dim]Checkpoint ID: {checkpoint_id}[/dim]\n")
 
+        # Initialize cost tracking (Phase 5.1)
+        if ObservabilityConfig.COST_TRACKING_ENABLED:
+            cost_tracker = get_cost_tracker()
+            cost_tracker.start_run(checkpoint_id)
+            if not args.quiet:
+                console.print(f"[dim]Cost tracking active (budget: ${ObservabilityConfig.COST_BUDGET_MAX:.2f})[/dim]\n")
+
         # Create graph
         if not args.quiet:
             console.print("[bold]Initializing workflow...[/bold]")
@@ -417,6 +437,54 @@ def main():
 
         if not args.quiet:
             console.print("\n[dim]Workflow execution complete[/dim]")
+
+        # Finalize cost tracking (Phase 5.1)
+        if ObservabilityConfig.COST_TRACKING_ENABLED:
+            cost_tracker = get_cost_tracker()
+            cost_record = cost_tracker.finalize_run(
+                subsystem=args.subsystem,
+                source_method='langsmith' if LANGSMITH_ACTIVE else 'heuristic'
+            )
+            # Store in final state for display
+            final_state['total_cost'] = cost_record.total_cost
+            final_state['cost_breakdown'] = cost_record.node_costs
+
+        # Record quality metrics (Phase 5.1)
+        quality_metrics_dict = final_state.get('quality_metrics')
+        if quality_metrics_dict:
+            from src.state import QualityMetrics, QualityIssue, QualitySeverity
+            # Convert dict to QualityMetrics object
+            # Note: validation_passed comes from state, not quality_metrics
+            issues = []
+            for issue_dict in quality_metrics_dict.get('issues', []):
+                try:
+                    issues.append(QualityIssue(
+                        severity=QualitySeverity(issue_dict.get('severity', 'minor')),
+                        requirement_id=issue_dict.get('requirement_id'),
+                        dimension=issue_dict.get('dimension', 'unknown'),
+                        description=issue_dict.get('description', ''),
+                        suggestion=issue_dict.get('suggestion', '')
+                    ))
+                except:
+                    pass  # Skip malformed issues
+
+            quality_metrics = QualityMetrics(
+                overall_score=quality_metrics_dict['overall_score'],
+                completeness=quality_metrics_dict['completeness'],
+                clarity=quality_metrics_dict['clarity'],
+                testability=quality_metrics_dict['testability'],
+                traceability=quality_metrics_dict['traceability'],
+                issues=issues
+            )
+            quality_tracker = get_quality_tracker()
+            quality_tracker.record_quality(
+                run_id=checkpoint_id,
+                subsystem=args.subsystem,
+                quality_metrics=quality_metrics,
+                validation_passed=final_state.get('validation_passed', False),
+                iteration_count=final_state.get('iteration_count', 0),
+                requirements_count=len(final_state.get('decomposed_requirements', []))
+            )
 
         # Display results
         if not args.quiet:
