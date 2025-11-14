@@ -5,6 +5,7 @@ Provides precise cost calculation using LangSmith token counts when available,
 or falls back to heuristic estimates.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
@@ -39,10 +40,13 @@ class CostTracker:
         Initialize cost tracker.
 
         Args:
-            db_path: Path to SQLite database (default: checkpoints/costs.db)
+            db_path: Path to SQLite database (default: data/cost_history.db)
+                    Falls back to checkpoints/costs.db for backward compatibility
         """
         if db_path is None:
-            db_path = Path("checkpoints/costs.db")
+            # Try environment variable first (useful for Docker)
+            db_path_str = os.getenv('COST_TRACKER_DB', 'data/cost_history.db')
+            db_path = Path(db_path_str)
 
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

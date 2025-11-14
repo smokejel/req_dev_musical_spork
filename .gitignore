@@ -236,11 +236,14 @@ $RECYCLE.BIN/
 langchain_cache/
 langchain_logs/
 
-# LangGraph checkpoints and state persistence
-# Contains SQLite database with workflow state for resuming interrupted runs
+# LangGraph checkpoints (ephemeral workflow state)
 checkpoints/
+
+# SQLite databases - EXCEPT Phase 5 persistent data
 *.db
 *.sqlite
+!data/costs.db      # Phase 5: Cost tracking history (keep for trend analysis)
+!data/quality.db    # Phase 5: Quality metrics history (keep for monitoring)
 
 # Generated outputs
 # Phase 3: Timestamped run directories (outputs/run_YYYYMMDD_HHMMSS_subsystem/)
@@ -253,6 +256,9 @@ results/
 *.csv
 *.json
 !examples/**/*.json  # Keep example expected outputs
+
+# Docker
+docker-compose.override.yml  # Local development overrides only
 
 # Temporary files
 tmp/
@@ -271,13 +277,13 @@ cache/
 llm_cache/
 
 # Documentation builds (if using Sphinx or similar)
-docs/_build/
+# Note: docs/_build/ already ignored in Python section (line 91)
 docs/_static/
 docs/_templates/
 
 # Logs
+# Note: *.log already ignored in Python section (line 78)
 logs/
-*.log
 
 # ============================================================================
 # Keep These Files (Exceptions)
@@ -322,7 +328,6 @@ TODO.md
 NOTES.txt
 
 # AI Assistant context files (for local development only)
-# Note: CLAUDE.md is version controlled as it contains critical project documentation
 CLAUDE.md
 
 # Large files (LFS might be needed for these)
@@ -339,4 +344,4 @@ CLAUDE.md
 .github/workflows/artifacts/
 
 # Coverage reports (HTML)
-htmlcov/
+# Note: htmlcov/ already ignored in Python section (line 59)

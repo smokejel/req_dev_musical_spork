@@ -71,6 +71,7 @@ CLAUDE.md
 outputs/
 output/
 checkpoints/
+data/
 *.db
 *.sqlite
 *.log

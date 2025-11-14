@@ -1,0 +1,32 @@
+# docker-compose.override.yml
+# Development overrides - automatically loaded by docker-compose
+# Enables live code editing without rebuilding the Docker image
+
+version: '3.8'
+
+services:
+  req-decomp:
+    # Mount source code for live development
+    volumes:
+      # Application source (read-write for development)
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./skills:/app/skills
+      - ./main.py:/app/main.py
+
+      # Keep other mounts from base docker-compose.yml
+      # (these are merged automatically)
+
+    # Development environment variables
+    environment:
+      - PYTHONDONTWRITEBYTECODE=0  # Allow .pyc files for faster reloads
+      - DEBUG=true
+
+    # Override command for development - drop into shell
+    # Uncomment the next line if you want an interactive shell by default
+    # command: /bin/bash
+
+# Usage:
+# 1. This file is automatically loaded when you run `docker-compose up`
+# 2. To ignore it temporarily: `docker-compose -f docker-compose.yml up`
+# 3. For production, delete or rename this file

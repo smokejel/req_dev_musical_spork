@@ -109,25 +109,21 @@ pip install -r requirements.txt
 
 ### 3. Configure API Keys
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` and add your API keys:
 
 ```bash
-# LLM API Keys (at least one required)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_API_KEY=...
-
-# LangSmith Tracing (optional but recommended)
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-LANGCHAIN_API_KEY=...
-LANGCHAIN_PROJECT=requirements-decomposition
-
-# Application Settings (optional)
-QUALITY_THRESHOLD=0.80
-MAX_ITERATIONS=3
-TEMPERATURE=0.0
+cp .env.example .env
+# Edit .env with your API keys
 ```
+
+**Required:** At least one LLM provider API key (OpenAI, Anthropic, or Google)
+**Recommended:** LangSmith API key for precise cost tracking (Phase 5)
+
+See `.env.example` for complete documentation including:
+- LLM API keys (OpenAI, Anthropic, Google)
+- LangSmith tracing configuration
+- Cost tracking and budget management
+- Application settings (quality threshold, max iterations)
 
 ### 4. Verify Installation
 
@@ -686,7 +682,7 @@ The decomposition workflow consists of 5 stages, executed sequentially:
 - Assigns unique IDs
 - Extracts metadata (type, section, priority)
 
-**LLM:** GPT-4o-mini (cost-optimized)
+**LLM:** Gemini 2.5 Flash-Lite (1M context window, ultra-fast)
 
 **Example Output:**
 ```
@@ -1581,7 +1577,7 @@ A: Quality threshold too high, max iterations too low, or input spec quality is 
 ### Technical Questions
 
 **Q: Which LLM providers are supported?**
-A: OpenAI (GPT-4o, GPT-4o-mini), Anthropic (Claude 3.5 Sonnet), Google (Gemini 1.5 Pro). Need at least one API key.
+A: OpenAI (GPT-4o, GPT-5 Nano), Anthropic (Claude 3.5 Sonnet), Google (Gemini 2.5 series). Need at least one API key.
 
 **Q: Can I use local/open-source models?**
 A: Not currently. LangChain-compatible models could be added with code modifications.

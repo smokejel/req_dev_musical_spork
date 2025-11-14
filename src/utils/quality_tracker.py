@@ -4,6 +4,7 @@ Quality metrics tracking and trend analysis.
 Tracks quality scores across workflow runs for trend analysis and improvement.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 from typing import Dict, Optional, List
@@ -41,10 +42,13 @@ class QualityTracker:
         Initialize quality tracker.
 
         Args:
-            db_path: Path to SQLite database (default: checkpoints/quality.db)
+            db_path: Path to SQLite database (default: data/quality_history.db)
+                    Falls back to checkpoints/quality.db for backward compatibility
         """
         if db_path is None:
-            db_path = Path("checkpoints/quality.db")
+            # Try environment variable first (useful for Docker)
+            db_path_str = os.getenv('QUALITY_TRACKER_DB', 'data/quality_history.db')
+            db_path = Path(db_path_str)
 
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

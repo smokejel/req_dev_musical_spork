@@ -4,7 +4,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.0.40+-green.svg)](https://github.com/langchain-ai/langgraph)
-[![MVP Production Ready](https://img.shields.io/badge/MVP-Production%20Ready-brightgreen.svg)](docs/phases/phase4/README.md)
+[![Phase 5 Complete](https://img.shields.io/badge/Phase%205-Complete-brightgreen.svg)](docs/phases/phase5/README.md)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 [![Large Documents](https://img.shields.io/badge/large%20docs-88K%2B%20tokens-blue.svg)](docs/phases/phase4/README.md)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
@@ -67,11 +67,56 @@ ls outputs/run_*
 
 ## 🐳 Docker Deployment
 
-### Quick Start with Docker
+### Quick Start with Docker Compose (Recommended)
 
 **Prerequisites:**
-- Docker installed
+- Docker and Docker Compose installed
 - API keys in `.env` file
+
+**Build and Run:**
+```bash
+# Build the image
+docker-compose build
+
+# Run decomposition
+docker-compose run req-decomp python main.py examples/phase0_simple_spec.txt --subsystem "Authentication"
+
+# Check output
+ls outputs/run_*
+```
+
+**Interactive Shell:**
+```bash
+docker-compose run req-decomp /bin/bash
+```
+
+### Docker Compose Usage Examples
+
+**Basic Decomposition:**
+```bash
+docker-compose run req-decomp \
+  python main.py examples/train_spec.txt --subsystem "Navigation"
+```
+
+**With Custom Quality Threshold:**
+```bash
+docker-compose run req-decomp \
+  python main.py examples/spec.txt --subsystem "Power" --quality-threshold 0.90
+```
+
+**With Human Review:**
+```bash
+docker-compose run req-decomp \
+  python main.py examples/spec.txt --subsystem "Control" --review-before-decompose
+```
+
+**Generate Cost & Quality Reports:**
+```bash
+docker-compose run req-decomp \
+  python scripts/generate_reports.py --days 30
+```
+
+### Alternative: Direct Docker Commands
 
 **Build Image:**
 ```bash
@@ -84,47 +129,10 @@ docker run --rm \
   --env-file .env \
   -v $(pwd)/examples:/app/examples:ro \
   -v $(pwd)/outputs:/app/outputs \
+  -v $(pwd)/checkpoints:/app/checkpoints \
+  -v $(pwd)/data:/app/data \
   req-decomp:latest \
   python main.py examples/phase0_simple_spec.txt --subsystem "Authentication"
-```
-
-**Check Output:**
-```bash
-ls outputs/run_*
-```
-
-### Docker Usage Examples
-
-**Basic Run:**
-```bash
-# Decompose requirements for Navigation subsystem
-docker run --rm \
-  --env-file .env \
-  -v $(pwd)/examples:/app/examples:ro \
-  -v $(pwd)/outputs:/app/outputs \
-  req-decomp:latest \
-  python main.py examples/train_spec.txt --subsystem "Navigation"
-```
-
-**With Custom Quality Threshold:**
-```bash
-docker run --rm \
-  --env-file .env \
-  -v $(pwd)/examples:/app/examples:ro \
-  -v $(pwd)/outputs:/app/outputs \
-  req-decomp:latest \
-  python main.py examples/spec.txt --subsystem "Power" --quality-threshold 0.90
-```
-
-**With Checkpoints (Resume Support):**
-```bash
-docker run --rm \
-  --env-file .env \
-  -v $(pwd)/examples:/app/examples:ro \
-  -v $(pwd)/outputs:/app/outputs \
-  -v $(pwd)/checkpoints:/app/checkpoints \
-  req-decomp:latest \
-  python main.py examples/spec.txt --subsystem "Control"
 ```
 
 **Interactive Mode:**
@@ -133,35 +141,68 @@ docker run --rm -it \
   --env-file .env \
   -v $(pwd)/examples:/app/examples:ro \
   -v $(pwd)/outputs:/app/outputs \
+  -v $(pwd)/checkpoints:/app/checkpoints \
+  -v $(pwd)/data:/app/data \
   req-decomp:latest \
   /bin/bash
 ```
 
 ### Docker Volume Mounts
 
-| Volume | Purpose | Mount Type |
-|--------|---------|------------|
-| `examples/` | Input specifications | Read-only (`:ro`) |
-| `outputs/` | Generated requirements | Read-write |
-| `checkpoints/` | State persistence (optional) | Read-write |
+| Volume | Purpose | Mount Type | docker-compose.yml |
+|--------|---------|------------|-------------------|
+| `examples/` | Input specifications | Read-only (`:ro`) | ✅ Auto-mounted |
+| `outputs/` | Generated requirements, reports | Read-write | ✅ Auto-mounted |
+| `checkpoints/` | Workflow state (SQLite) | Read-write | ✅ Auto-mounted |
+| `data/` | Cost & quality tracking databases | Read-write | ✅ Auto-mounted |
+| `scripts/` | Reporting scripts | Read-only (`:ro`) | ✅ Auto-mounted |
 
-### Docker Notes
+### Development Mode
 
-**Image Size:** ~500MB (Python 3.11 + dependencies)
+**For live code editing without rebuilding:**
+
+The included `docker-compose.override.yml` automatically mounts source code for development:
+
+```bash
+# Edit code locally, changes reflected immediately in container
+docker-compose run req-decomp python main.py examples/spec.txt --subsystem "Auth"
+```
+
+**To run without development overrides:**
+```bash
+docker-compose -f docker-compose.yml run req-decomp
+```
+
+### Docker Image Details
+
+**Size:** ~400MB (optimized with multi-stage build)
+- Base: Python 3.11-slim
+- Build stage: Dependencies compilation
+- Runtime stage: Minimal production image
+
+**System Dependencies:**
+- poppler-utils (PDF parsing)
 
 **Environment Variables:**
-- Passed via `--env-file .env`
-- Must include at least one LLM API key
+- Passed via `--env-file .env` (docker-compose handles this automatically)
+- Must include at least one LLM API key (see `.env.docker.example`)
 
 **Security:**
-- Examples mounted read-only for safety
-- Never include `.env` in image (use `--env-file`)
+- Examples and scripts mounted read-only for safety
+- Runtime data (outputs, checkpoints, data) isolated in volumes
+- `.env` file excluded from image (loaded at runtime)
 - NEVER commit `.env` to version control
 
 **Performance:**
 - Same as local Python deployment
+- Multi-stage build reduces layer size
 - Volume I/O minimal overhead
 - Network access required for LLM APIs
+
+**LangSmith Integration:**
+- Cost tracking databases persist in `data/` volume
+- Enable with `LANGCHAIN_TRACING_V2=true` in `.env`
+- Precise token counts and costs tracked automatically
 
 ---
 
@@ -188,10 +229,11 @@ pytest tests/ -m "phase1 and integration" -v
 
 ### Test Coverage
 
-- **110 total tests**
-- **105 unit tests** - Fast, no external dependencies (5-6 seconds)
-- **5 integration tests** - Real LLM API calls (~30-45 seconds)
-- **100% passing** in Phase 1
+- **290 total tests** (Phase 0-5 complete)
+- **Unit tests:** Fast, mocked LLM responses
+- **Integration tests:** Real LLM API calls (requires API keys)
+- **End-to-end tests:** Full workflow testing
+- **Test markers:** `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.phase{0-5}`
 
 ---
 
@@ -423,21 +465,17 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 
 ### Environment Variables
 
-Create a `.env` file with your API keys:
+Copy `.env.example` to `.env` and configure your API keys:
 
 ```bash
-# Required for integration tests and Phase 2+
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
-
-# Optional (for future phases)
-OPENAI_API_KEY=sk-xxxxxxxxxxxxx
-GOOGLE_API_KEY=xxxxxxxxxxxxx
-
-# LangSmith tracing (optional)
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=xxxxxxxxxxxxx
-LANGCHAIN_PROJECT=requirements-decomposition
+cp .env.example .env
+# Edit .env with your API keys
 ```
+
+**Required:** At least one LLM provider API key (Anthropic, OpenAI, or Google)
+**Recommended:** LangSmith API key for precise cost tracking (Phase 5)
+
+See `.env.example` for complete documentation of all environment variables.
 
 ### Application Settings
 

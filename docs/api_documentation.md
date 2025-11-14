@@ -1,7 +1,7 @@
 # API Documentation
 
-**Version:** 1.0.0 (Phase 3 Complete)
-**Last Updated:** 2025-11-02
+**Version:** 1.2.0 (Phase 5 Complete - Enhanced Observability)
+**Last Updated:** 2025-11-12
 
 ## Table of Contents
 
@@ -11,8 +11,9 @@
 4. [State Schema](#state-schema)
 5. [Agent API](#agent-api)
 6. [Utility Functions](#utility-functions)
-7. [Configuration](#configuration)
-8. [Error Handling](#error-handling)
+7. [Phase 5: Observability & Tracking](#phase-5-observability--tracking)
+8. [Configuration](#configuration)
+9. [Error Handling](#error-handling)
 
 ---
 
@@ -268,9 +269,10 @@ def extract_node(state: DecompositionState) -> DecompositionState:
     Extract requirements from specification document.
 
     Uses:
-        - RequirementsAnalystAgent (GPT-4o-mini)
+        - RequirementsAnalystAgent (Gemini 2.5 Flash-Lite)
         - requirements-extraction skill
         - Document parser (txt, docx, pdf)
+        - 1M context window for large documents
 
     Updates State:
         - extracted_requirements: List[Dict] (serialized Requirement objects)
@@ -899,8 +901,9 @@ class RequirementsAnalystAgent(BaseAgent):
 
     Uses:
         - requirements-extraction skill
-        - GPT-4o-mini (primary)
-        - GPT-4o (fallback)
+        - Gemini 2.5 Flash-Lite (primary)
+        - Gemini 2.5 Flash (fallback)
+        - 1M context window for large documents (88K+ tokens)
     """
 
     def __init__(self):
@@ -1701,15 +1704,332 @@ NodeType.ANALYZE: CLAUDE_SONNET_3_5  # Architectural reasoning
 
 ---
 
+## Phase 5: Observability & Tracking
+
+### Overview
+
+Phase 5 (November 12, 2025) adds production-grade observability with real-time cost tracking, quality trend monitoring, and automated reporting capabilities.
+
+###  Cost Tracker (`src/utils/cost_tracker.py`)
+
+SQLite-based cost history tracking with budget management.
+
+```python
+class CostTracker:
+    """
+    Track LLM costs across workflow runs with budget management.
+
+    Database Schema:
+        - cost_runs: run_id, timestamp, subsystem, total_cost, cost_source
+        - cost_details: run_id, node, model, input_tokens, output_tokens, cost
+    """
+
+    def __init__(self, db_path: str = "data/costs.db"):
+        """Initialize cost tracker with database path."""
+
+    def start_run(self, run_id: str, subsystem: str) -> None:
+        """Start tracking a new workflow run."""
+
+    def record_node_cost(
+        self,
+        run_id: str,
+        node: str,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost_source: str = "heuristic"
+    ) -> float:
+        """
+        Record cost for a single node execution.
+
+        Args:
+            run_id: Unique run identifier
+            node: Node name (extract, analyze, decompose, validate)
+            model: LLM model used
+            input_tokens: Input token count
+            output_tokens: Output token count
+            cost_source: "langsmith" or "heuristic"
+
+        Returns:
+            Calculated cost for this node
+        """
+
+    def calculate_node_cost(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int
+    ) -> float:
+        """Calculate cost using model pricing from llm_config.py."""
+
+    def check_budget(
+        self,
+        run_id: str,
+        warning_threshold: float = 1.00,
+        max_budget: float = 5.00
+    ) -> Dict[str, Any]:
+        """
+        Check if budget thresholds exceeded.
+
+        Returns:
+            {
+                "total_cost": float,
+                "warning": bool,
+                "exceeded": bool,
+                "message": str
+            }
+        """
+
+    def finalize_run(self, run_id: str, cost_source: str = "heuristic") -> float:
+        """Complete run and return total cost."""
+
+    def get_recent_runs(self, days: int = 30) -> List[Dict]:
+        """Retrieve recent run cost history."""
+
+    def get_cost_trends(self, days: int = 30) -> Dict[str, Any]:
+        """
+        Get aggregated cost statistics.
+
+        Returns:
+            {
+                "total_cost": float,
+                "avg_cost": float,
+                "min_cost": float,
+                "max_cost": float,
+                "run_count": int
+            }
+        """
+```
+
+### Quality Tracker (`src/utils/quality_tracker.py`)
+
+SQLite-based quality metrics tracking across workflow runs.
+
+```python
+class QualityTracker:
+    """
+    Track quality metrics across workflow runs.
+
+    Database Schema:
+        - quality_runs: run_id, timestamp, subsystem, overall_score,
+                       completeness, clarity, testability, traceability,
+                       validation_passed, iteration_count, requirements_count
+    """
+
+    def __init__(self, db_path: str = "data/quality.db"):
+        """Initialize quality tracker with database path."""
+
+    def record_quality(
+        self,
+        run_id: str,
+        subsystem: str,
+        quality_metrics: QualityMetrics,
+        iteration_count: int,
+        requirements_count: int
+    ) -> None:
+        """
+        Record quality metrics for a workflow run.
+
+        Args:
+            run_id: Unique run identifier
+            subsystem: Target subsystem
+            quality_metrics: QualityMetrics object from validation
+            iteration_count: Number of refinement iterations
+            requirements_count: Number of decomposed requirements
+        """
+
+    def get_recent_runs(self, days: int = 30) -> List[Dict]:
+        """Retrieve recent run quality history."""
+
+    def get_quality_trends(self, days: int = 30) -> Dict[str, Any]:
+        """
+        Get aggregated quality statistics.
+
+        Returns:
+            {
+                "avg_overall_score": float,
+                "avg_completeness": float,
+                "avg_clarity": float,
+                "avg_testability": float,
+                "avg_traceability": float,
+                "pass_rate": float (0.0-1.0),
+                "avg_iterations": float,
+                "run_count": int
+            }
+        """
+
+    def get_subsystem_comparison(self, days: int = 30) -> Dict[str, Dict]:
+        """
+        Compare quality metrics across different subsystems.
+
+        Returns:
+            {
+                "Navigation": {"avg_score": 0.92, "pass_rate": 1.0, ...},
+                "Authentication": {"avg_score": 0.85, "pass_rate": 0.8, ...}
+            }
+        """
+```
+
+### LangSmith Integration (`src/utils/langsmith_integration.py`)
+
+Helper utilities for extracting token counts from LLM responses.
+
+```python
+def extract_tokens_from_response(response: Any) -> Tuple[int, int]:
+    """
+    Extract input and output token counts from LLM response.
+
+    Supports:
+        - OpenAI: response_metadata.token_usage
+        - Anthropic: response_metadata.usage
+        - Google/Gemini: response_metadata.usage_metadata
+
+    Args:
+        response: LLM response object from LangChain
+
+    Returns:
+        (input_tokens, output_tokens) tuple
+        Returns (0, 0) if extraction fails
+    """
+
+class LangSmithTracker:
+    """
+    Optional: Fetch precise costs from LangSmith API.
+    Requires LANGCHAIN_API_KEY environment variable.
+    """
+
+    def get_run_costs(self, run_id: str) -> Dict[str, Any]:
+        """Fetch precise token counts and costs from LangSmith."""
+
+    def get_project_runs(self, project_name: str, limit: int = 10) -> List[Dict]:
+        """List recent runs for a LangSmith project."""
+
+    def get_aggregate_costs(
+        self,
+        project_name: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> Dict[str, Any]:
+        """Get aggregated costs for a project over time period."""
+```
+
+### Observability Config (`config/observability_config.py`)
+
+Configuration for LangSmith and cost tracking.
+
+```python
+class ObservabilityConfig:
+    """Configuration for observability features."""
+
+    @staticmethod
+    def is_langsmith_enabled() -> bool:
+        """Check if LangSmith tracing is enabled."""
+
+    @staticmethod
+    def get_langsmith_config() -> Dict[str, str]:
+        """
+        Get LangSmith configuration from environment.
+
+        Returns:
+            {
+                "endpoint": str,
+                "api_key": str,
+                "project": str,
+                "enabled": bool
+            }
+        """
+
+    @staticmethod
+    def get_cost_config() -> Dict[str, Any]:
+        """
+        Get cost tracking configuration.
+
+        Returns:
+            {
+                "enabled": bool,
+                "warning_threshold": float,
+                "max_budget": float
+            }
+        """
+```
+
+### Report Generation (`scripts/generate_reports.py`)
+
+CLI tool for generating cost and quality reports.
+
+```bash
+# Generate all reports
+python scripts/generate_reports.py
+
+# Generate only cost report
+python scripts/generate_reports.py --report cost
+
+# Generate for specific time period
+python scripts/generate_reports.py --days 7
+
+# Save to file
+python scripts/generate_reports.py --output reports/
+```
+
+**Example Cost Report:**
+```
+=== Cost Report (Last 30 Days) ===
+
+Total Cost: $0.0342
+Average Cost per Run: $0.0114
+Min Cost: $0.0089
+Max Cost: $0.0156
+Number of Runs: 3
+
+Recent Runs:
+  run_20251112_140523 | Navigation | $0.0156 | heuristic
+  run_20251112_135012 | Navigation | $0.0098 | heuristic
+  run_20251112_134501 | Navigation | $0.0089 | heuristic
+```
+
+**Example Quality Report:**
+```
+=== Quality Report (Last 30 Days) ===
+
+Average Overall Score: 0.94
+Average Completeness: 0.92
+Average Clarity: 0.95
+Average Testability: 0.93
+Average Traceability: 0.96
+
+Pass Rate: 100.0%
+Average Iterations: 0.67
+
+Subsystem Comparison:
+  Navigation: avg=0.94, pass_rate=100.0%, runs=3
+```
+
+---
+
 ## Version History
 
-- **v1.0.0** (2025-11-02): Initial API documentation
+- **v1.2.0** (2025-11-12): Phase 5 Complete - Enhanced Observability
+  - Cost tracking with SQLite-based history (`cost_tracker.py`)
+  - Quality metrics tracking (`quality_tracker.py`)
+  - LangSmith integration utilities (`langsmith_integration.py`)
+  - Budget management with warnings and limits
+  - Automated report generation scripts
+  - Observability configuration module
+
+- **v1.1.0** (2025-11-08): Phase 4 Complete - Testing & Deployment
+  - Large document support (Gemini 2.5, GPT-5 Nano integration)
+  - Performance timing tracking
+  - Heuristic cost estimation
+  - 88K+ token PDF processing capability
+  - Model configuration updates
+
+- **v1.0.0** (2025-11-02): Phase 3 Complete - Graph Assembly & UX
   - Complete Phase 3 implementation
   - All nodes, agents, and utilities documented
   - Graph assembly and state schema finalized
 
 ---
 
-**Last Updated:** 2025-11-02
-**Phase:** 3 Complete
-**Status:** Production Ready
+**Last Updated:** 2025-11-12
+**Phase:** 5 Complete
+**Status:** Production-Ready with Enhanced Observability

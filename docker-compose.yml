@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  req-decomp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: req-decomp:latest
+    container_name: requirements-decomposition
+
+    # Environment variables from .env file
+    env_file:
+      - .env
+
+    # Interactive terminal for human review prompts
+    stdin_open: true
+    tty: true
+
+    # Volume mounts for data persistence and I/O
+    volumes:
+      # Input specifications (read-only)
+      - ./examples:/app/examples:ro
+
+      # Output results (requirements, traceability, quality reports)
+      - ./outputs:/app/outputs
+
+      # Checkpoint state for workflow resumption
+      - ./checkpoints:/app/checkpoints
+
+      # Cost & quality tracking databases (Phase 5)
+      - ./data:/app/data
+
+      # Optional: reporting scripts
+      - ./scripts:/app/scripts:ro
+
+    # Default command shows help
+    command: python main.py --help
+
+    # Resource limits (optional - adjust based on your needs)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '1.0'
+    #       memory: 1G
+
+# Named volumes for persistent data (alternative to bind mounts)
+# Uncomment if you prefer Docker-managed volumes
+# volumes:
+#   outputs:
+#   checkpoints:
+#   data:
