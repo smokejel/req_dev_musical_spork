@@ -47,6 +47,12 @@ class ModelConfig:
     cost_per_1k_output: float = 0.0
     """Cost per 1K output tokens in USD"""
 
+    energy_per_1k_input_wh: float = 0.0
+    """Energy consumption per 1K input tokens in Watt-hours (Wh)"""
+
+    energy_per_1k_output_wh: float = 0.0
+    """Energy consumption per 1K output tokens in Watt-hours (Wh)"""
+
     description: str = ""
     """Model description and use case"""
 
@@ -63,6 +69,8 @@ GPT_4O = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.0025,
     cost_per_1k_output=0.01,
+    energy_per_1k_input_wh=0.0006,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
+    energy_per_1k_output_wh=0.0006,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
     description="GPT-4 Optimized - Best for complex reasoning tasks"
 )
 
@@ -73,6 +81,8 @@ GPT_4O_MINI = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.00015,
     cost_per_1k_output=0.0006,
+    energy_per_1k_input_wh=0.00015,  # Estimated (4x smaller than GPT-4o)
+    energy_per_1k_output_wh=0.00015,  # Estimated (4x smaller than GPT-4o)
     description="GPT-4 Mini - Cost-effective for structured extraction"
 )
 
@@ -83,6 +93,8 @@ GPT_5_NANO = ModelConfig(
     max_tokens=32768,  # 32K+ output tokens per MODEL_DEFINITIONS.md
     cost_per_1k_input=0.0001,  # Estimate - most cost-efficient GPT-5 variant
     cost_per_1k_output=0.0005,  # Estimate - verify from OpenAI pricing
+    energy_per_1k_input_wh=0.0003,  # Estimated (efficient variant, ~50% of GPT-4o)
+    energy_per_1k_output_wh=0.0003,  # Estimated (efficient variant, ~50% of GPT-4o)
     description="GPT-5 Nano - Fastest, most cost-efficient GPT-5 variant"
 )
 
@@ -94,6 +106,8 @@ CLAUDE_SONNET_4_5 = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.003,
     cost_per_1k_output=0.015,
+    energy_per_1k_input_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
+    energy_per_1k_output_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
     description="Claude Sonnet 4.5 - Excellent for analysis and validation"
 )
 
@@ -104,6 +118,8 @@ CLAUDE_SONNET_3_5 = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.003,
     cost_per_1k_output=0.015,
+    energy_per_1k_input_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
+    energy_per_1k_output_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
     description="Claude Sonnet 4.5 - Strong architectural reasoning"
 )
 
@@ -115,6 +131,8 @@ GEMINI_2_5_FLASH_LITE = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0001,  # Ultra cost-efficient (verify from pricing page)
     cost_per_1k_output=0.0004,  # Ultra cost-efficient (verify from pricing page)
+    energy_per_1k_input_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
+    energy_per_1k_output_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
     description="Gemini 2.5 Flash-Lite - Ultra fast, 1M context, most cost-efficient"
 )
 
@@ -125,6 +143,8 @@ GEMINI_2_5_FLASH = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0002,  # Best price-performance (verify from pricing page)
     cost_per_1k_output=0.0008,  # Best price-performance (verify from pricing page)
+    energy_per_1k_input_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
+    energy_per_1k_output_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
     description="Gemini 2.5 Flash - Best price-performance, 1M context window"
 )
 
@@ -135,6 +155,8 @@ GEMINI_2_5_PRO = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0005,  # State-of-the-art thinking (verify from pricing page)
     cost_per_1k_output=0.002,   # State-of-the-art thinking (verify from pricing page)
+    energy_per_1k_input_wh=0.0006,  # Estimated (+25% vs Flash for advanced reasoning)
+    energy_per_1k_output_wh=0.0006,  # Estimated (+25% vs Flash for advanced reasoning)
     description="Gemini 2.5 Pro - State-of-the-art thinking model, 1M context"
 )
 
@@ -262,6 +284,40 @@ def estimate_cost(
     input_cost = (input_tokens / 1000) * model.cost_per_1k_input
     output_cost = (output_tokens / 1000) * model.cost_per_1k_output
     return input_cost + output_cost
+
+
+def estimate_energy(
+    model: ModelConfig,
+    input_tokens: int,
+    output_tokens: int,
+    include_pue: bool = True
+) -> float:
+    """
+    Estimate the energy consumption of an LLM call.
+
+    Energy values are based on published research:
+    - GPT-4o: Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
+    - Gemini: Google (Aug 2025) - 0.24 Wh per 500 tokens
+    - Others: Conservative estimates based on model class
+
+    Args:
+        model: Model configuration
+        input_tokens: Number of input tokens
+        output_tokens: Number of output tokens
+        include_pue: If True, apply PUE factor of 1.10 for datacenter overhead
+
+    Returns:
+        Estimated energy consumption in Watt-hours (Wh)
+    """
+    input_energy = (input_tokens / 1000) * model.energy_per_1k_input_wh
+    output_energy = (output_tokens / 1000) * model.energy_per_1k_output_wh
+    total_energy = input_energy + output_energy
+
+    # Apply PUE (Power Usage Effectiveness) for datacenter overhead
+    if include_pue:
+        total_energy *= 1.10  # Industry standard PUE of 1.10
+
+    return total_energy
 
 
 # ============================================================================

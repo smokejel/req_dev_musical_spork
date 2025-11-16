@@ -229,6 +229,28 @@ def display_configuration(args):
     console.print()
 
 
+def _display_energy_context(total_energy_wh: float):
+    """
+    Display contextual comparisons for energy consumption.
+
+    Helps users understand the energy usage in everyday terms.
+
+    Args:
+        total_energy_wh: Total energy consumption in Watt-hours
+    """
+    # Contextual comparisons (Phase 6.1)
+    # Average LED TV: ~50W → 2.5W per minute average (considering standby modes)
+    # Electric car: ~0.25 kWh per km (250 Wh/km)
+
+    tv_minutes = total_energy_wh / 2.5  # Minutes of TV usage
+    car_meters = (total_energy_wh / 250) * 1000  # Meters driven by electric car
+
+    console.print("\n[bold]💡 Energy Context:[/bold]")
+    console.print(f"   • Equivalent to [yellow]~{tv_minutes:.1f} minutes[/yellow] of LED TV usage (50W average)")
+    console.print(f"   • Equivalent to [yellow]~{car_meters:.1f} meters[/yellow] driven by electric car (0.25 kWh/km)")
+    console.print()
+
+
 def display_results(final_state):
     """
     Display workflow results summary.
@@ -285,19 +307,23 @@ def display_results(final_state):
     console.print(summary_table)
     console.print()
 
-    # Performance summary (Phase 4.2 - Observability)
+    # Performance summary (Phase 4.2 - Observability + Phase 6.1 - Energy Tracking)
     timing_breakdown = final_state.get("timing_breakdown", {})
     cost_breakdown = final_state.get("cost_breakdown", {})
+    energy_breakdown = final_state.get("energy_breakdown", {})
 
     if timing_breakdown:
-        perf_table = Table(title="Performance & Cost Breakdown", show_header=True, header_style="bold cyan")
-        perf_table.add_column("Node", style="cyan", width=25)
-        perf_table.add_column("Time (s)", style="white", justify="right", width=15)
-        perf_table.add_column("% Time", style="yellow", justify="right", width=15)
-        perf_table.add_column("Cost ($)", style="green", justify="right", width=15)
+        perf_table = Table(title="Performance, Cost & Energy Breakdown", show_header=True, header_style="bold cyan")
+        perf_table.add_column("Node", style="cyan", width=20)
+        perf_table.add_column("Time (s)", style="white", justify="right", width=12)
+        perf_table.add_column("% Time", style="yellow", justify="right", width=10)
+        perf_table.add_column("Cost ($)", style="green", justify="right", width=12)
+        perf_table.add_column("Energy (Wh)", style="magenta", justify="right", width=14)
+        perf_table.add_column("% Energy", style="yellow", justify="right", width=10)
 
         total_time = sum(timing_breakdown.values())
         total_cost_sum = sum(cost_breakdown.values()) if cost_breakdown else 0
+        total_energy_sum = sum(energy_breakdown.values()) if energy_breakdown else 0
 
         # Sort by time (slowest first)
         sorted_nodes = sorted(timing_breakdown.items(), key=lambda x: x[1], reverse=True)
@@ -305,12 +331,16 @@ def display_results(final_state):
         for node_name, duration in sorted_nodes:
             time_percentage = (duration / total_time * 100) if total_time > 0 else 0
             node_cost = cost_breakdown.get(node_name, 0.0) if cost_breakdown else 0.0
+            node_energy = energy_breakdown.get(node_name, 0.0) if energy_breakdown else 0.0
+            energy_percentage = (node_energy / total_energy_sum * 100) if total_energy_sum > 0 else 0
 
             perf_table.add_row(
                 node_name.replace("_", " ").title(),
                 f"{duration:.1f}",
                 f"{time_percentage:.1f}%",
-                f"${node_cost:.3f}" if node_cost > 0 else "$0.000"
+                f"${node_cost:.3f}" if node_cost > 0 else "$0.000",
+                f"{node_energy:.4f}" if node_energy > 0 else "0.0000",
+                f"{energy_percentage:.1f}%" if node_energy > 0 else "0.0%"
             )
 
         # Add total row
@@ -318,15 +348,22 @@ def display_results(final_state):
             "[bold]TOTAL[/bold]",
             f"[bold]{total_time:.1f}[/bold]",
             "[bold]100.0%[/bold]",
-            f"[bold]${total_cost_sum:.3f}[/bold]" if total_cost_sum > 0 else "[bold]$0.000[/bold]"
+            f"[bold]${total_cost_sum:.3f}[/bold]" if total_cost_sum > 0 else "[bold]$0.000[/bold]",
+            f"[bold]{total_energy_sum:.4f} Wh[/bold]" if total_energy_sum > 0 else "[bold]0.0000 Wh[/bold]",
+            "[bold]100.0%[/bold]" if total_energy_sum > 0 else "[bold]0.0%[/bold]"
         )
 
         console.print(perf_table)
-        if total_cost_sum > 0:
+
+        # Display energy context (Phase 6.1)
+        if total_energy_sum > 0:
+            _display_energy_context(total_energy_sum)
+
+        if total_cost_sum > 0 or total_energy_sum > 0:
             if LANGSMITH_ACTIVE:
-                console.print("[dim]✓ Costs calculated from LangSmith traces (precise)[/dim]")
+                console.print("[dim]✓ Costs/Energy calculated from LangSmith traces (precise)[/dim]")
             else:
-                console.print("[dim]Note: Cost estimates are heuristic-based (±30%). Enable LangSmith for precise tracking.[/dim]")
+                console.print("[dim]Note: Cost and energy estimates are heuristic-based (±30%). Enable LangSmith for precise tracking.[/dim]")
         console.print()
 
     # Output files
@@ -511,6 +548,12 @@ def main():
             # Store in final state for display
             final_state['total_cost'] = cost_record.total_cost
             final_state['cost_breakdown'] = cost_record.node_costs
+
+        # Calculate and store energy consumption (Phase 6.1)
+        from src.graph import estimate_workflow_energy
+        energy_data = estimate_workflow_energy(final_state)
+        final_state['total_energy_wh'] = energy_data['total_energy_wh']
+        final_state['energy_breakdown'] = energy_data['energy_breakdown']
 
         # Record quality metrics (Phase 5.1)
         quality_metrics_dict = final_state.get('quality_metrics')

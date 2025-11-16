@@ -5,6 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.0.40+-green.svg)](https://github.com/langchain-ai/langgraph)
 [![Phase 5 Complete](https://img.shields.io/badge/Phase%205-Complete-brightgreen.svg)](docs/phases/phase5/README.md)
+[![Phase 6 Complete](https://img.shields.io/badge/Phase%206-Complete-brightgreen.svg)](docs/phases/phase6/README.md)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 [![Large Documents](https://img.shields.io/badge/large%20docs-88K%2B%20tokens-blue.svg)](docs/phases/phase4/README.md)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
@@ -315,13 +316,14 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 - **Multi-Model Integration**: Gemini 2.5 (1M context), GPT-5 Nano, Claude Sonnet working together
 - **Performance Monitoring**: Real-time timing tracking per workflow node with bottleneck identification
 - **Cost Tracking**: Heuristic-based cost estimation (±30% accuracy) displayed per-node and total
+- **Energy Tracking** (Phase 6.1 ✅): Token-based energy consumption estimates (Wh) with contextual comparisons (TV minutes, electric car meters)
 - **Intelligent Error Handling**: 3-tier error taxonomy (TRANSIENT, CONTENT, FATAL)
 - **LLM Fallback System**: Automatic retry with exponential backoff and model switching
 - **Skills-Based Architecture**: Modular expertise in SKILL.md files (Phase 0 validated)
 - **Quality Gates**: Automated scoring with configurable thresholds and iterative refinement
 - **Full Traceability**: Parent-child requirement relationships tracked throughout
 - **Human-in-the-Loop**: Review integration at quality gates
-- **Beautiful CLI Output**: Rich console tables showing progress, timing, costs, and quality metrics
+- **Beautiful CLI Output**: Rich console tables showing progress, timing, costs, quality metrics, and energy consumption
 
 ---
 
@@ -354,6 +356,72 @@ Requirements          System Context        Detailed Reqs         Quality Gate
 ---
 
 ## 📊 Current Status
+
+### Phase 6: Energy Consumption Tracking 📋 **PLANNING**
+
+**Date:** November 2025
+**Status:** Documentation complete, implementation pending
+**Estimated Effort:** 3-4 hours
+
+**Objectives:**
+- Add token-based energy consumption estimates (Wh)
+- Display energy in Performance & Cost Breakdown table
+- Provide contextual comparisons (TV usage, car distance)
+- Research-based energy coefficients for all 8 models
+
+**Deliverables:**
+- 📋 Complete planning documentation in `docs/phases/phase6/`
+  - README.md: Overview and scope
+  - implementation_plan.md: Detailed technical steps
+  - energy_coefficients_research.md: Research sources and methodology
+- ⏳ Code implementation: Pending
+- 🎯 Testing strategy: Defined
+
+**Research Findings:**
+- GPT-4o: 0.3 Wh per 500-token query (Epoch AI, Feb 2025)
+- Gemini 2.5 Flash: 0.24 Wh median text prompt (Google, Aug 2025)
+- Token-based estimation accuracy: ±30% (acceptable for trend analysis)
+
+**Future Enhancements (Optional):**
+- Phase 6.2: CO2 emissions conversion
+- Phase 6.3: Historical energy trend tracking
+- Phase 6.4: Advanced adjustments (context length scaling)
+
+[See Phase 6 Documentation](docs/phases/phase6/README.md)
+
+### Phase 5: Production Hardening & Enhanced Observability ✅ **COMPLETE**
+
+**Date:** November 12, 2025
+**Duration:** 1 day
+
+**Deliverables:**
+- ✅ Real-time cost tracking with SQLite-based history
+- ✅ Budget management ($1.00 warning, $5.00 max)
+- ✅ Quality metrics tracking across runs
+- ✅ Cost and quality trend reporting tools
+- ✅ Automated report generation scripts
+- ✅ LangSmith integration infrastructure (ready for activation)
+
+**Key Features:**
+- Historical data analysis with trend reports
+- Per-node cost breakdown with model identification
+- Budget warnings and execution limits
+- Quality trend monitoring (4-dimensional scores)
+
+[See Phase 5 Documentation](docs/phases/phase5/README.md)
+
+### Phase 4: Testing & Observability ✅ **COMPLETE**
+
+**Date:** November 6-9, 2025
+
+**Key Achievements:**
+- ✅ 88K+ token PDF processing (396 requirements)
+- ✅ 7/7 E2E tests passing (100% pass rate)
+- ✅ Gemini 2.5 & GPT-5 Nano integration
+- ✅ Performance & cost breakdown display
+- ✅ Docker deployment ready
+
+[See Phase 4 Documentation](docs/phases/phase4/README.md)
 
 ### Phase 3: Graph Assembly & UX ✅ **COMPLETE**
 

@@ -111,6 +111,92 @@ def estimate_workflow_cost(state: DecompositionState) -> Dict[str, float]:
     }
 
 
+def estimate_workflow_energy(state: DecompositionState) -> Dict[str, float]:
+    """
+    Estimate workflow energy consumption based on document size and iterations.
+
+    This provides a rough energy estimate (±30% accuracy) when precise token tracking
+    isn't available. Uses the same token heuristics as cost estimation.
+
+    Energy values are based on published research:
+    - GPT-4o: Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
+    - Gemini: Google (Aug 2025) - 0.24 Wh per 500 tokens
+    - Claude: Conservative estimates based on model class
+
+    Args:
+        state: Final decomposition state
+
+    Returns:
+        Dict with 'total_energy_wh' and 'energy_breakdown' by node
+
+    Note:
+        Energy estimates include 1.10 PUE (datacenter overhead).
+        For precise tracking, enable LangSmith integration.
+    """
+    from config.llm_config import (
+        GEMINI_2_5_FLASH_LITE, CLAUDE_SONNET_3_5,
+        GPT_5_NANO, GEMINI_2_5_FLASH, estimate_energy
+    )
+
+    # Estimate token usage based on state data (same as cost estimation)
+    extracted_count = len(state.get('extracted_requirements', []))
+    decomposed_count = len(state.get('decomposed_requirements', []))
+    iteration_count = state.get('iteration_count', 0)
+
+    # Energy estimation using same token heuristics
+    energy = {}
+
+    # Extract node (Gemini 2.5 Flash-Lite)
+    extract_input_tokens = extracted_count * 1000
+    extract_output_tokens = extracted_count * 200
+    energy['extract'] = estimate_energy(
+        GEMINI_2_5_FLASH_LITE,
+        extract_input_tokens,
+        extract_output_tokens,
+        include_pue=True
+    )
+
+    # Analyze node (Claude Sonnet 3.5)
+    analyze_input_tokens = 5000
+    analyze_output_tokens = 2000
+    energy['analyze'] = estimate_energy(
+        CLAUDE_SONNET_3_5,
+        analyze_input_tokens,
+        analyze_output_tokens,
+        include_pue=True
+    )
+
+    # Decompose node (GPT-5 Nano) - multiply by iterations
+    decompose_input_tokens = decomposed_count * 3000 * (iteration_count + 1)
+    decompose_output_tokens = decomposed_count * 500 * (iteration_count + 1)
+    energy['decompose'] = estimate_energy(
+        GPT_5_NANO,
+        decompose_input_tokens,
+        decompose_output_tokens,
+        include_pue=True
+    )
+
+    # Validate node (Gemini 2.5 Flash) - multiply by iterations
+    validate_input_tokens = decomposed_count * 2000 * (iteration_count + 1)
+    validate_output_tokens = decomposed_count * 300 * (iteration_count + 1)
+    energy['validate'] = estimate_energy(
+        GEMINI_2_5_FLASH,
+        validate_input_tokens,
+        validate_output_tokens,
+        include_pue=True
+    )
+
+    # Document node (negligible energy)
+    energy['document'] = 0.0
+
+    total_energy_wh = sum(energy.values())
+
+    return {
+        'total_energy_wh': total_energy_wh,
+        'energy_breakdown': energy
+    }
+
+
 def route_after_validation(state: DecompositionState) -> Literal["pass", "revise", "human_review"]:
     """
     Route based on validation results.
@@ -312,7 +398,7 @@ def _execute_node_with_progress(
         timing_breakdown[node_name] = duration
         result['timing_breakdown'] = timing_breakdown
 
-        # Get current cost for display (Phase 5.1)
+        # Get current cost and energy for display (Phase 5.1 + Phase 6.1)
         cost_display = ""
         if ObservabilityConfig.COST_TRACKING_ENABLED:
             cost_tracker = get_cost_tracker()

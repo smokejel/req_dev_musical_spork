@@ -379,6 +379,15 @@ class DecompositionState(TypedDict, total=False):
     token_usage: Dict[str, Dict[str, int]]
     """Token usage per node (e.g., {'extract': {'input': 5000, 'output': 1200}, ...})"""
 
+    # ========================================================================
+    # Energy Tracking (Phase 6.1 - Energy Consumption Tracking)
+    # ========================================================================
+    total_energy_wh: float
+    """Total energy consumption in Watt-hours (Wh) for entire workflow"""
+
+    energy_breakdown: Dict[str, float]
+    """Energy consumption per node in Wh (e.g., {'extract': 0.012, 'analyze': 0.008, ...})"""
+
 
 # ============================================================================
 # Helper Functions
@@ -420,5 +429,8 @@ def create_initial_state(
         total_cost=0.0,
         cost_breakdown={},
         timing_breakdown={},
-        token_usage={}
+        token_usage={},
+        # Phase 6.1: Energy tracking fields
+        total_energy_wh=0.0,
+        energy_breakdown={}
     )
