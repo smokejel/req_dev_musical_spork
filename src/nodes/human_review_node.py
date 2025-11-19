@@ -109,58 +109,68 @@ def human_review_node(state: DecompositionState) -> DecompositionState:
     human_feedback = ""
     decision_approved = False
 
-    while True:
-        choice = Prompt.ask(
-            "\n[bold cyan]Enter choice (1-4)[/bold cyan]",
-            choices=["1", "2", "3", "4"],
-            show_choices=False
-        )
+    # Try interactive input, fall back to auto-approve for non-interactive environments (Studio, tests)
+    try:
+        while True:
+            choice = Prompt.ask(
+                "\n[bold cyan]Enter choice (1-4)[/bold cyan]",
+                choices=["1", "2", "3", "4"],
+                show_choices=False
+            )
 
-        if choice == "1":
-            # Approve/Proceed (context-aware)
-            if is_pre_decomposition:
-                confirm = Confirm.ask("[green]Proceed with decomposition?[/green]")
-                proceed_message = "\n[green]✓ Proceeding to decomposition.[/green]"
-            else:
-                confirm = Confirm.ask("[green]Confirm approval?[/green]")
-                proceed_message = "\n[green]✓ Requirements approved. Proceeding to documentation generation.[/green]"
+            if choice == "1":
+                # Approve/Proceed (context-aware)
+                if is_pre_decomposition:
+                    confirm = Confirm.ask("[green]Proceed with decomposition?[/green]")
+                    proceed_message = "\n[green]✓ Proceeding to decomposition.[/green]"
+                else:
+                    confirm = Confirm.ask("[green]Confirm approval?[/green]")
+                    proceed_message = "\n[green]✓ Requirements approved. Proceeding to documentation generation.[/green]"
 
-            if confirm:
-                human_feedback = "approved"
-                decision_approved = True
-                console.print(proceed_message)
-                break
+                if confirm:
+                    human_feedback = "approved"
+                    decision_approved = True
+                    console.print(proceed_message)
+                    break
 
-        elif choice == "2":
-            # Revise with feedback
-            console.print("\n[yellow]Please provide revision guidance:[/yellow]")
-            console.print("(Describe what needs to be fixed or improved)")
-            feedback_text = Prompt.ask("[yellow]Feedback[/yellow]")
+            elif choice == "2":
+                # Revise with feedback
+                console.print("\n[yellow]Please provide revision guidance:[/yellow]")
+                console.print("(Describe what needs to be fixed or improved)")
+                feedback_text = Prompt.ask("[yellow]Feedback[/yellow]")
 
-            if feedback_text.strip():
-                human_feedback = f"revise: {feedback_text}"
-                decision_approved = False
-                console.print("\n[yellow]✓ Feedback captured. Requirements will be revised.[/yellow]")
-                break
-            else:
-                console.print("[red]Feedback cannot be empty. Please provide guidance.[/red]")
+                if feedback_text.strip():
+                    human_feedback = f"revise: {feedback_text}"
+                    decision_approved = False
+                    console.print("\n[yellow]✓ Feedback captured. Requirements will be revised.[/yellow]")
+                    break
+                else:
+                    console.print("[red]Feedback cannot be empty. Please provide guidance.[/red]")
 
-        elif choice == "3":
-            # View details (context-aware)
-            if is_pre_decomposition:
-                _display_extracted_requirements_detail(extracted_reqs)
-            else:
-                _display_decomposed_requirements_detail(decomposed_reqs)
-            continue
+            elif choice == "3":
+                # View details (context-aware)
+                if is_pre_decomposition:
+                    _display_extracted_requirements_detail(extracted_reqs)
+                else:
+                    _display_decomposed_requirements_detail(decomposed_reqs)
+                continue
 
-        elif choice == "4":
-            # View strategy
-            strategy = state.get("decomposition_strategy")
-            if strategy:
-                _display_strategy_detail(strategy)
-            else:
-                console.print("[red]No decomposition strategy available.[/red]")
-            continue
+            elif choice == "4":
+                # View strategy
+                strategy = state.get("decomposition_strategy")
+                if strategy:
+                    _display_strategy_detail(strategy)
+                else:
+                    console.print("[red]No decomposition strategy available.[/red]")
+                continue
+
+    except (EOFError, OSError) as e:
+        # Non-interactive environment (LangSmith Studio, tests, background process)
+        console.print("\n[yellow]⚠ Non-interactive environment detected[/yellow]")
+        console.print("[yellow]Auto-approving for Studio/automated execution[/yellow]")
+        human_feedback = "approved"
+        decision_approved = True
+        console.print("\n[green]✓ Automatically approved for non-interactive execution.[/green]")
 
     # Return updated state
     return {

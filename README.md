@@ -64,6 +64,45 @@ ls outputs/run_*
 # Expected: Timestamped directory with requirements, traceability, and quality report
 ```
 
+### Visualize Workflow Structure
+
+```bash
+# Generate workflow graph diagram (Mermaid format)
+python scripts/visualize_graph.py
+
+# View the generated diagram
+# - GitHub/GitLab: View docs/workflow_graph.md directly
+# - Online: Copy Mermaid code to https://mermaid.live
+# - Local: Use VS Code with Mermaid extension
+```
+
+See [`docs/workflow_graph.md`](docs/workflow_graph.md) for the complete workflow diagram with node descriptions and routing logic.
+
+### Run in LangSmith Studio
+
+**Interactive debugging and testing in LangSmith's visual IDE:**
+
+```bash
+# Install LangGraph CLI
+pip install -U "langgraph-cli[inmem]"
+
+# Start local Agent Server
+langgraph dev
+
+# Access Studio at the provided URL:
+# https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
+```
+
+**Features in Studio:**
+- 🔍 **Visual Graph Execution** - Watch nodes execute in real-time
+- 🧪 **State Inspection** - View `DecompositionState` at each step
+- ⏪ **Time Travel Debugging** - Rewind execution to any point
+- 🎯 **Interactive Testing** - Run workflows without CLI
+- 📊 **LangSmith Tracing** - See token usage and costs per LLM call (if enabled)
+- 🔄 **Thread Management** - Create multiple parallel test runs
+
+See [`docs/langsmith_studio_guide.md`](docs/langsmith_studio_guide.md) for detailed Studio usage instructions.
+
 ---
 
 ## 🐳 Docker Deployment

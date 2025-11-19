@@ -23,6 +23,11 @@ from src.utils.output_generator import (
 
 console = Console()
 
+# Create base outputs directory at module import time to avoid blocking I/O in async context
+# This prevents BlockingError when running with langgraph dev server
+_OUTPUTS_DIR = Path("outputs")
+_OUTPUTS_DIR.mkdir(exist_ok=True, parents=True)
+
 
 def document_node(state: DecompositionState) -> DecompositionState:
     """

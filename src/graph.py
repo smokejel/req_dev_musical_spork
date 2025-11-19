@@ -28,6 +28,11 @@ from src.nodes.validate_node import validate_node
 from src.nodes.human_review_node import human_review_node
 from src.nodes.document_node import document_node
 from src.utils.cost_tracker import get_cost_tracker
+
+# Create checkpoint directory at module import time to avoid blocking I/O in async context
+# This prevents BlockingError when running with langgraph dev server
+_CHECKPOINT_DIR = Path("checkpoints")
+_CHECKPOINT_DIR.mkdir(exist_ok=True, parents=True)
 from config.observability_config import ObservabilityConfig, LANGSMITH_ACTIVE
 
 console = Console()
@@ -502,11 +507,10 @@ def create_decomposition_graph() -> StateGraph:
 
     # Set up state persistence with disk-based checkpointing (Phase 4.1)
     # SqliteSaver enables resume functionality and persistent state across sessions
-    checkpoint_dir = Path("checkpoints")
-    checkpoint_dir.mkdir(exist_ok=True)
+    # Note: Directory created at module import time to avoid blocking I/O in async context
 
     # Create SQLite connection for checkpointing
-    db_path = str(checkpoint_dir / "decomposition_state.db")
+    db_path = str(_CHECKPOINT_DIR / "decomposition_state.db")
     conn = sqlite3.connect(db_path, check_same_thread=False)
 
     # Create SqliteSaver with the connection
@@ -625,9 +629,39 @@ def get_graph_visualization() -> str:
     return visualization
 
 
+def get_graph():
+    """
+    Export the compiled graph for LangSmith Studio and Agent Server.
+
+    This function is called by the Agent Server (via langgraph.json) to load
+    the workflow for interactive debugging in LangSmith Studio.
+
+    The function creates a fully compiled StateGraph with:
+    - All 6 workflow nodes (extract, analyze, decompose, validate, human_review, document)
+    - Conditional routing logic for iterative refinement
+    - SQLite-based state persistence for checkpointing
+    - Human-in-the-loop interrupts at quality gates
+
+    Returns:
+        CompiledStateGraph: The fully compiled decomposition workflow with
+            checkpointing enabled and all routing logic configured
+
+    Example:
+        # Used automatically by LangGraph CLI:
+        $ langgraph dev
+
+        # Or manually in Python:
+        >>> from src.graph import get_graph
+        >>> app = get_graph()
+        >>> result = app.invoke({"spec_document_path": "...", "target_subsystem": "..."})
+    """
+    return create_decomposition_graph()
+
+
 # Export main functions
 __all__ = [
     "create_decomposition_graph",
+    "get_graph",  # Added for LangSmith Studio support
     "route_after_validation",
     "route_after_human_review",
     "route_after_analyze",
