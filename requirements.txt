@@ -16,3 +16,6 @@ rich>=13.0.0               # CLI output formatting
 
 # Phase 4.2: Observability & Performance Monitoring
 langsmith>=0.1.0            # LangSmith tracing and monitoring
+
+# LangSmith Studio Support (Phase 6 - Studio Integration)
+langgraph-cli[inmem]>=0.1.0  # Agent Server for LangSmith Studio interactive debugging
