@@ -289,6 +289,9 @@ logs/
 # Keep These Files (Exceptions)
 # ============================================================================
 
+# Keep LangGraph configuration (required for Studio)
+!langgraph.json
+
 # Keep example files
 !examples/
 !examples/**/*.txt

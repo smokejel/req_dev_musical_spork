@@ -1,0 +1,19 @@
+{
+  "dependencies": [
+    "langchain_anthropic",
+    "langchain_openai",
+    "langchain_google_genai",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    "pydantic",
+    "python-docx",
+    "PyPDF2",
+    "rich",
+    "langsmith",
+    "python-dotenv"
+  ],
+  "graphs": {
+    "decomposition": "./src/graph.py:get_graph"
+  },
+  "env": "./.env"
+}
