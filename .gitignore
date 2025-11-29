@@ -330,9 +330,6 @@ notes.md
 TODO.md
 NOTES.txt
 
-# AI Assistant context files (for local development only)
-CLAUDE.md
-
 # Large files (LFS might be needed for these)
 *.pkl
 *.pickle
