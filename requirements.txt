@@ -7,7 +7,7 @@ python-dotenv>=1.0.0
 
 # Phase 1: Foundation - Base architecture and Extract node
 langgraph>=0.0.40          # Graph workflow orchestration
-langgraph-checkpoint-sqlite<3.0.0,>=2.0.0  # Disk-based state persistence (Phase 4.1)
+langgraph-checkpoint-sqlite>=3.0.0,<4.0.0  # Disk-based state persistence (Phase 4.1) - Upgraded to 3.0 for security fix (CVE-2025-64439)
 pydantic>=2.5.0            # State schema validation
 python-docx>=1.0.0         # DOCX document parsing
 PyPDF2>=3.0.0              # PDF document parsing
