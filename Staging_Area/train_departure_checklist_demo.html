@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Departure Checklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0f1c;
+            color: #e0e6ed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .tablet-container {
+            width: 100%;
+            max-width: 900px;
+            background: #1a2332;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid #2a3a52;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .train-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .header-info {
+            text-align: right;
+        }
+
+        .train-id {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .departure-time {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #2a3a52;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .checklist-container {
+            padding: 30px;
+        }
+
+        .checklist-item {
+            background: #243447;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            padding: 25px;
+            border: 1px solid #2a3a52;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .checklist-item.locked {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .checklist-item.locked .checkbox {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .checklist-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .checklist-item:hover::before {
+            left: 100%;
+        }
+
+        .checklist-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: #3b4a62;
+        }
+
+        .checklist-item.completed {
+            background: #1e3a2a;
+            border-color: #10b981;
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .item-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .checkbox {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            background: #1a2332;
+        }
+
+        .checklist-item.completed .checkbox {
+            background: #10b981;
+            border-color: #10b981;
+            animation: checkPulse 0.4s ease;
+        }
+
+        @keyframes checkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .checkbox svg {
+            width: 18px;
+            height: 18px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .checklist-item.completed .checkbox svg {
+            opacity: 1;
+        }
+
+        .item-status {
+            font-size: 14px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: #374151;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        .checklist-item.completed .item-status {
+            background: #10b981;
+            color: white;
+        }
+
+        .item-description {
+            color: #9ca3af;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .action-button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #2563eb;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-button:hover {
+            background: #1e40af;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .bulletin-input-container {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bulletin-input {
+            padding: 10px 15px;
+            background: #1a2332;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .bulletin-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .confirm-button {
+            padding: 10px 20px;
+            background: #2563eb;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .confirm-button:hover {
+            background: #1e40af;
+        }
+
+        .footer {
+            padding: 30px;
+            background: #1a2332;
+            border-top: 1px solid #2a3a52;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .crew-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .crew-member {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .crew-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .proceed-button {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .proceed-button.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .proceed-button.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a2332;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid #2a3a52;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #2a3a52;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e6ed;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            background: #374151;
+            color: white;
+        }
+
+        .modal-body {
+            color: #e0e6ed;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #60a5fa;
+        }
+
+        .modal-section p, .modal-section li {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #9ca3af;
+        }
+
+        .modal-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .modal-section li {
+            padding: 8px 0;
+            border-bottom: 1px solid #374151;
+        }
+
+        .modal-section li:last-child {
+            border-bottom: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #e0e6ed;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 15px;
+            background: #243447;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 12px 24px;
+            background: #10b981;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .save-button:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .edit-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .edit-link:hover {
+            text-decoration: underline;
+        }
+
+        .work-location-item {
+            background: #243447;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .location-milepost {
+            font-weight: 600;
+            color: #e0e6ed;
+        }
+
+        .location-type {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 15px;
+            background: #374151;
+            color: #9ca3af;
+        }
+
+        .location-details {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: absolute;
+            background: #374151;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1001;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .checklist-container {
+                padding: 20px;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .bulletin-input-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .bulletin-input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="tablet-container">
+        <div class="header">
+            <h1>
+                <div class="train-icon">🚂</div>
+                Departure Checklist
+            </h1>
+            <div class="header-info">
+                <div class="train-id">Train #8472</div>
+                <div class="departure-time">14:30</div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar"></div>
+        </div>
+
+        <div class="checklist-container">
+            <div class="checklist-item locked" onclick="toggleItem(this, 0)" data-index="0">
+                <div class="item-header">
+                    <div class="item-title">
+                        <div class="checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        Job Briefing
+                        <a href="#job-briefing" style="color: #60a5fa; text-decoration: none; font-size: 14px; margin-left: 10px;" onclick="event.stopPropagation(); showModal('jobBriefingModal');">View Details →</a>
+                    </div>
+                    <span class="item-status">Pending</span>
+                </div>
+                <div class="item-description">
+                    Review crew assignments, route details, and special instructions for today's operation.
+                </div>
+                <button class="action-button" onclick="unlockItem(event, 0)">
+                    📋 Open Briefing
+                </button>
+            </div>
+
+            <div class="checklist-item locked" onclick="toggleItem(this, 1)" data-index="1">
+                <div class="item-header">
+                    <div class="item-title">
+                        <div class="checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        Work Locations
+                    </div>
+                    <span class="item-status">Pending</span>
+                </div>
+                <div class="item-description">
+                    Verify all scheduled work locations, track restrictions, and temporary speed limits along the route.
+                </div>
+                <button class="action-button" onclick="unlockItem(event, 1)">
+                    📍 View Work Locations
+                </button>
+            </div>
+
+            <div class="checklist-item locked" onclick="toggleItem(this, 2)" data-index="2">
+                <div class="item-header">
+                    <div class="item-title">
+                        <div class="checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        Train Consist
+                    </div>
+                    <span class="item-status">Pending</span>
+                </div>
+                <div class="item-description">
+                    Enter complete train consist information and validate against PTC system data. Verify locomotive and car configuration matches train sheet records.
+                </div>
+                <button class="action-button" onclick="unlockItem(event, 2)">
+                    🚃 Enter Consist
+                </button>
+            </div>
+
+            <div class="checklist-item locked" onclick="toggleItem(this, 3)" data-index="3">
+                <div class="item-header">
+                    <div class="item-title">
+                        <div class="checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        PTC Initialization Confirmation
+                    </div>
+                    <span class="item-status">Pending</span>
+                </div>
+                <div class="item-description">
+                    Ensure Positive Train Control system is properly initialized and all safety systems are operational.
+                </div>
+                <button class="action-button" onclick="unlockItem(event, 3)">
+                    🔒 Check PTC Status
+                </button>
+            </div>
+
+            <div class="checklist-item locked" onclick="toggleItem(this, 4)" data-index="4">
+                <div class="item-header">
+                    <div class="item-title">
+                        <div class="checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        Confirm Train's Dispatcher Bulletin Number
+                    </div>
+                    <span class="item-status">Pending</span>
+                </div>
+                <div class="item-description">
+                    Verify current dispatcher bulletin number and acknowledge all track bulletins and special instructions.
+                </div>
+                <div class="bulletin-input-container">
+                    <input type="text" class="bulletin-input" id="bulletinNumber" placeholder="Enter active bulletin number" onclick="event.stopPropagation()">
+                    <button class="confirm-button" onclick="confirmBulletin(event)">Confirm</button>
+                </div>
+                <button class="action-button" onclick="unlockItem(event, 4)">
+                    📢 View Bulletins
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="crew-info">
+                <div class="crew-member">
+                    <div class="crew-avatar">JD</div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 500;">John Davis</div>
+                        <div style="font-size: 12px; color: #9ca3af;">Engineer</div>
+                    </div>
+                </div>
+                <div class="crew-member">
+                    <div class="crew-avatar">SM</div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 500;">Sarah Miller</div>
+                        <div style="font-size: 12px; color: #9ca3af;">Conductor</div>
+                    </div>
+                </div>
+            </div>
+            <button class="proceed-button" id="proceedButton" onclick="proceedToDeparture()">
+                Proceed to Departure
+            </button>
+        </div>
+    </div>
+
+    <!-- Job Briefing Modal -->
+    <div class="modal" id="jobBriefingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Job Briefing - Train #8472</h2>
+                <button class="close-button" onclick="closeModal('jobBriefingModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>Route Information</h3>
+                    <ul>
+                        <li><strong>Origin:</strong> Chicago Union Station</li>
+                        <li><strong>Destination:</strong> Milwaukee Intermodal Station</li>
+                        <li><strong>Distance:</strong> 86.5 miles</li>
+                        <li><strong>Estimated Runtime:</strong> 2 hours 15 minutes</li>
+                    </ul>
+                </div>
+                <div class="modal-section">
+                    <h3>Crew Assignments</h3>
+                    <ul>
+                        <li><strong>Engineer:</strong> John Davis (Employee #4782)</li>
+                        <li><strong>Conductor:</strong> Sarah Miller (Employee #3291)</li>
+                        <li><strong>Relief Engineer:</strong> Mike Thompson (Employee #5643)</li>
+                    </ul>
+                </div>
+                <div class="modal-section">
+                    <h3>Special Instructions</h3>
+                    <p>• Reduced speed zone MP 42.0 - MP 45.5 (40 mph max)</p>
+                    <p>• Track work in progress at MP 67.2 - single track operation</p>
+                    <p>• Weather advisory: Light snow expected after 16:00</p>
+                    <p>• Priority freight - maintain schedule adherence</p>
+                </div>
+                <div class="modal-section">
+                    <h3>Consist Summary</h3>
+                    <p>2 locomotives (ES44AC), 42 freight cars, 1 caboose</p>
+                    <p>Total weight: 4,850 tons</p>
+                    <p>Hazmat cars: 3 (positions 12, 23, 31)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Work Locations Modal -->
+    <div class="modal" id="workLocationsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Work Locations</h2>
+                <button class="close-button" onclick="closeModal('workLocationsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>Active Work Orders</h3>
+                    <div class="work-location-item">
+                        <div class="location-header">
+                            <span class="location-milepost">MP 42.0 - MP 45.5</span>
+                            <span class="location-type">Track Maintenance</span>
+                        </div>
+                        <div class="location-details">
+                            Rail replacement in progress. Speed restriction: 40 mph maximum. Expected completion: 18:00 today.
+                        </div>
+                    </div>
+                    <div class="work-location-item">
+                        <div class="location-header">
+                            <span class="location-milepost">MP 67.2</span>
+                            <span class="location-type">Signal Work</span>
+                        </div>
+                        <div class="location-details">
+                            Signal system upgrade. Single track operation with dispatcher control. Follow signal indications.
+                        </div>
+                    </div>
+                    <div class="work-location-item">
+                        <div class="location-header">
+                            <span class="location-milepost">MP 78.9 - MP 79.3</span>
+                            <span class="location-type">Bridge Inspection</span>
+                        </div>
+                        <div class="location-details">
+                            Routine bridge inspection. No speed restriction, but be prepared to stop if flagged.
+                        </div>
+                    </div>
+                </div>
+                <a href="#edit-locations" class="edit-link" onclick="event.preventDefault(); alert('Opening work location editor...')">
+                    ✏️ Edit Work Locations
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Train Consist Modal -->
+    <div class="modal" id="trainConsistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Enter Train Consist</h2>
+                <button class="close-button" onclick="closeModal('trainConsistModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="consistForm">
+                    <div class="form-group">
+                        <label for="trainNumber">Train Number</label>
+                        <input type="text" id="trainNumber" value="8472" readonly>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="leadLoco">Lead Locomotive</label>
+                            <input type="text" id="leadLoco" placeholder="e.g., BNSF 7823">
+                        </div>
+                        <div class="form-group">
+                            <label for="trailLoco">Trailing Locomotive</label>
+                            <input type="text" id="trailLoco" placeholder="e.g., BNSF 7456">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carCount">Total Car Count</label>
+                            <input type="number" id="carCount" placeholder="42">
+                        </div>
+                        <div class="form-group">
+                            <label for="totalWeight">Total Weight (tons)</label>
+                            <input type="number" id="totalWeight" placeholder="4850">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="hazmatCars">Hazmat Car Positions</label>
+                        <input type="text" id="hazmatCars" placeholder="e.g., 12, 23, 31">
+                    </div>
+                    <div class="form-group">
+                        <label for="totalLength">Total Length (feet)</label>
+                        <input type="number" id="totalLength" placeholder="5280">
+                    </div>
+                    <button type="button" class="save-button" onclick="saveConsist()">Validate & Save Consist</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let completedItems = [false, false, false, false, false];
+        let unlockedItems = [false, false, false, false, false];
+        let bulletinValidated = false;
+
+        function toggleItem(element, index) {
+            // Only allow toggling if the item is unlocked
+            if (!unlockedItems[index]) {
+                // Show a message that the item needs to be unlocked first
+                showTooltip(element, 'Please click the action button first');
+                return;
+            }
+
+            // Special check for bulletin number
+            if (index === 4 && !bulletinValidated) {
+                showTooltip(element, 'Please enter and confirm bulletin number first');
+                return;
+            }
+
+            completedItems[index] = !completedItems[index];
+            
+            if (completedItems[index]) {
+                element.classList.add('completed');
+                element.querySelector('.item-status').textContent = 'Completed';
+            } else {
+                element.classList.remove('completed');
+                element.querySelector('.item-status').textContent = 'Reviewed';
+            }
+
+            updateProgress();
+        }
+
+        function unlockItem(event, index) {
+            event.stopPropagation();
+            
+            unlockedItems[index] = true;
+            const item = document.querySelector(`[data-index="${index}"]`);
+            item.classList.remove('locked');
+            item.querySelector('.item-status').textContent = 'Reviewed';
+            
+            // Show appropriate modal based on index
+            switch(index) {
+                case 0:
+                    showModal('jobBriefingModal');
+                    break;
+                case 1:
+                    showModal('workLocationsModal');
+                    break;
+                case 2:
+                    showModal('trainConsistModal');
+                    break;
+                case 3:
+                    // Simulate PTC check
+                    setTimeout(() => {
+                        alert('Checking PTC Status...\n\n✅ PTC System: ACTIVE\n✅ GPS Signal: STRONG\n✅ Radio Communication: VERIFIED\n✅ Onboard Computer: OPERATIONAL\n\nAll safety systems nominal.');
+                    }, 100);
+                    break;
+                case 4:
+                    setTimeout(() => {
+                        alert('Loading Dispatcher Bulletins...\n\nCurrent Bulletins:\n• Bulletin #2024-312: Track work MP 42-45.5\n• Bulletin #2024-315: Weather advisory\n• Bulletin #2024-318: Signal work MP 67.2\n\nPlease enter the current bulletin number to confirm receipt.');
+                    }, 100);
+                    break;
+            }
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                // Prevent body scroll when modal is open
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+                // Restore body scroll
+                document.body.style.overflow = '';
+            }
+        }
+
+        function updateProgress() {
+            const completedCount = completedItems.filter(item => item).length;
+            const progressPercent = (completedCount / completedItems.length) * 100;
+            
+            const progressBar = document.getElementById('progressBar');
+            if (progressBar) {
+                progressBar.style.width = progressPercent + '%';
+            }
+
+            // Enable proceed button when all items are completed
+            const proceedButton = document.getElementById('proceedButton');
+            if (proceedButton) {
+                if (completedCount === completedItems.length) {
+                    proceedButton.classList.add('active');
+                } else {
+                    proceedButton.classList.remove('active');
+                }
+            }
+        }
+
+        function confirmBulletin(event) {
+            event.stopPropagation();
+            
+            const bulletinInput = document.getElementById('bulletinNumber');
+            const bulletinNumber = bulletinInput.value.trim();
+            
+            if (!bulletinNumber) {
+                showTooltip(bulletinInput, 'Please enter a bulletin number');
+                bulletinInput.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    bulletinInput.style.animation = '';
+                }, 500);
+                return;
+            }
+
+            // Validate bulletin number format (assuming format like 2024-XXX)
+            const bulletinPattern = /^\d{4}-\d{3}$/;
+            if (!bulletinPattern.test(bulletinNumber)) {
+                showTooltip(bulletinInput, 'Invalid format. Use YYYY-XXX (e.g., 2024-312)');
+                bulletinInput.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    bulletinInput.style.animation = '';
+                }, 500);
+                return;
+            }
+
+            bulletinValidated = true;
+            bulletinInput.style.borderColor = '#10b981';
+            bulletinInput.disabled = true;
+            
+            const confirmButton = event.target;
+            confirmButton.textContent = '✓ Confirmed';
+            confirmButton.style.background = '#10b981';
+            confirmButton.disabled = true;
+            
+            showTooltip(confirmButton, 'Bulletin number validated successfully');
+        }
+
+        function saveConsist() {
+            const form = document.getElementById('consistForm');
+            const formData = new FormData(form);
+            
+            // Basic validation
+            const leadLoco = document.getElementById('leadLoco').value.trim();
+            const carCount = document.getElementById('carCount').value.trim();
+            const totalWeight = document.getElementById('totalWeight').value.trim();
+            
+            if (!leadLoco || !carCount || !totalWeight) {
+                alert('Please fill in all required fields (Lead Locomotive, Car Count, Total Weight)');
+                return;
+            }
+
+            // Simulate validation success
+            alert('Train consist validated successfully!\n\n' +
+                  'PTC system updated with consist data.\n' +
+                  'All safety parameters verified.\n' +
+                  'Ready for departure preparation.');
+            
+            closeModal('trainConsistModal');
+        }
+
+        function proceedToDeparture() {
+            const allCompleted = completedItems.every(item => item);
+            
+            if (!allCompleted) {
+                alert('Please complete all checklist items before proceeding to departure.');
+                return;
+            }
+
+            // Simulate departure confirmation
+            const confirmed = confirm('All pre-departure checks completed.\n\nProceed to departure?\n\nThis will authorize the train for movement.');
+            
+            if (confirmed) {
+                alert('✅ DEPARTURE AUTHORIZED\n\nTrain #8472 cleared for departure.\nMaintain radio contact with dispatcher.\nSafe travels!');
+                
+                // Could redirect to next phase or update UI
+                document.querySelector('.proceed-button').textContent = 'Departure Authorized ✅';
+                document.querySelector('.proceed-button').style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+            }
+        }
+
+        function showTooltip(element, message) {
+            // Remove existing tooltip
+            const existingTooltip = document.querySelector('.tooltip');
+            if (existingTooltip) {
+                existingTooltip.remove();
+            }
+
+            // Create new tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = message;
+            
+            // Position tooltip
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.left + 'px';
+            tooltip.style.top = (rect.top - 40) + 'px';
+            
+            document.body.appendChild(tooltip);
+            
+            // Show tooltip
+            setTimeout(() => {
+                tooltip.classList.add('show');
+            }, 10);
+            
+            // Hide tooltip after 3 seconds
+            setTimeout(() => {
+                tooltip.classList.remove('show');
+                setTimeout(() => {
+                    if (tooltip.parentNode) {
+                        tooltip.remove();
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            const modals = document.querySelectorAll('.modal.active');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const activeModal = document.querySelector('.modal.active');
+                if (activeModal) {
+                    closeModal(activeModal.id);
+                }
+            }
+        });
+
+        // Initialize progress bar
+        updateProgress();
+    </script>
+</body>
+</html>

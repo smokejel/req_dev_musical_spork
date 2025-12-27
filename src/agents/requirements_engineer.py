@@ -10,7 +10,7 @@ This agent:
 
 import json
 import re
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 from src.agents.base_agent import BaseAgent, AgentError
 from src.state import DetailedRequirement, RequirementType
@@ -40,7 +40,9 @@ class RequirementsEngineerAgent(BaseAgent):
         system_requirements: List[Dict[str, Any]],
         decomposition_strategy: Dict[str, Any],
         target_subsystem: str,
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        domain_context: Dict[str, Any] = None,
+        human_feedback: Optional[str] = None
     ) -> List[DetailedRequirement]:
         """
         Execute the agent's main task (decompose requirements).
@@ -52,6 +54,7 @@ class RequirementsEngineerAgent(BaseAgent):
             decomposition_strategy: Binding strategy from analyze node
             target_subsystem: Name of the target subsystem
             enable_fallback: Whether to enable model fallback on errors
+            domain_context: Optional domain context for domain-aware decomposition
 
         Returns:
             List of DetailedRequirement objects
@@ -63,7 +66,9 @@ class RequirementsEngineerAgent(BaseAgent):
             system_requirements,
             decomposition_strategy,
             target_subsystem,
-            enable_fallback
+            enable_fallback,
+            domain_context,
+            human_feedback
         )
 
     def decompose_requirements(
@@ -71,7 +76,9 @@ class RequirementsEngineerAgent(BaseAgent):
         system_requirements: List[Dict[str, Any]],
         decomposition_strategy: Dict[str, Any],
         target_subsystem: str,
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        domain_context: Dict[str, Any] = None,
+        human_feedback: Optional[str] = None
     ) -> List[DetailedRequirement]:
         """
         Decompose system requirements into subsystem requirements.
@@ -81,6 +88,7 @@ class RequirementsEngineerAgent(BaseAgent):
             decomposition_strategy: Binding strategy (allocation rules, naming convention, etc.)
             target_subsystem: Name of the target subsystem
             enable_fallback: Whether to enable model fallback on errors
+            domain_context: Optional domain context for domain-aware decomposition
 
         Returns:
             List of DetailedRequirement objects
@@ -102,7 +110,9 @@ class RequirementsEngineerAgent(BaseAgent):
         prompt = self._build_decomposition_prompt(
             system_requirements,
             decomposition_strategy,
-            target_subsystem
+            target_subsystem,
+            domain_context,
+            human_feedback
         )
 
         # Define the execution function
@@ -126,7 +136,9 @@ class RequirementsEngineerAgent(BaseAgent):
         self,
         system_requirements: List[Dict[str, Any]],
         decomposition_strategy: Dict[str, Any],
-        target_subsystem: str
+        target_subsystem: str,
+        domain_context: Dict[str, Any] = None,
+        human_feedback: Optional[str] = None
     ) -> str:
         """
         Build the prompt for requirements decomposition.
@@ -135,6 +147,7 @@ class RequirementsEngineerAgent(BaseAgent):
             system_requirements: List of requirement dicts
             decomposition_strategy: Strategy dict
             target_subsystem: Target subsystem name
+            domain_context: Optional domain context for domain-aware decomposition
 
         Returns:
             Formatted prompt string
@@ -152,9 +165,12 @@ class RequirementsEngineerAgent(BaseAgent):
         # Format strategy for the prompt
         strategy_text = json.dumps(decomposition_strategy, indent=2)
 
+        # Get skill content with domain context injected
+        skill_content = self.get_skill_content(domain_context)
+
         prompt = f"""You are a Requirements Engineer Agent. Your task is to decompose system-level requirements into detailed subsystem requirements following a BINDING decomposition strategy.
 
-{self.skill_content}
+{skill_content}
 
 ---
 
@@ -169,6 +185,8 @@ class RequirementsEngineerAgent(BaseAgent):
 ```json
 {strategy_text}
 ```
+
+{self._format_human_feedback(human_feedback)}
 
 **Instructions**:
 1. Apply the allocation rules to determine which requirements belong to "{target_subsystem}"
@@ -188,6 +206,37 @@ class RequirementsEngineerAgent(BaseAgent):
 Output the JSON array now:"""
 
         return prompt
+
+    def _format_human_feedback(self, human_feedback: Optional[str]) -> str:
+        """
+        Format human feedback for inclusion in the prompt.
+
+        Args:
+            human_feedback: Raw human feedback from review (e.g., "revise: Only decompose functional")
+
+        Returns:
+            Formatted feedback section for prompt, or empty string if no feedback
+        """
+        if not human_feedback:
+            return ""
+
+        # Strip "revise:" prefix if present
+        feedback_text = human_feedback
+        if feedback_text.lower().startswith("revise:"):
+            feedback_text = feedback_text[7:].strip()
+
+        if not feedback_text or feedback_text.lower() == "approved":
+            return ""
+
+        return f"""
+**HUMAN REVIEW FEEDBACK**:
+{feedback_text}
+
+IMPORTANT: Follow the human feedback instructions carefully. If the feedback specifies
+which types of requirements to process (e.g., "only functional requirements", "exclude
+performance requirements"), you MUST only decompose those specified requirements and
+omit the others from your output.
+"""
 
     def _parse_decomposition_response(
         self,

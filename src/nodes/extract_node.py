@@ -45,6 +45,41 @@ def extract_node(state: DecompositionState) -> DecompositionState:
 
         spec_path = state['spec_document_path']
 
+        # Load domain context if domain specified (Phase 7.2)
+        domain_context = None
+        domain_name = state.get('domain_name', 'generic')
+        subsystem_id = state.get('subsystem_id')
+
+        if domain_name and domain_name != 'generic':
+            try:
+                from src.utils.domain_loader import DomainLoader, DomainLoadError
+
+                # Load domain context (conventions, glossary, examples)
+                domain_context = DomainLoader.load_context(
+                    domain_name=domain_name,
+                    subsystem_id=subsystem_id
+                )
+
+                # Log successful load
+                error_log.append({
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'error_type': 'INFO',
+                    'node': 'extract',
+                    'message': f"Loaded domain context: {domain_name}" + (f"/{subsystem_id}" if subsystem_id else ""),
+                    'details': {'domain_name': domain_name, 'subsystem_id': subsystem_id}
+                })
+
+            except DomainLoadError as e:
+                # Non-fatal: fall back to generic domain
+                error_log.append({
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'error_type': 'CONTENT',
+                    'node': 'extract',
+                    'message': f"Domain loading failed, using generic domain: {str(e)}",
+                    'details': {'requested_domain': domain_name}
+                })
+                domain_context = None  # Fall back to generic
+
         # Step 1: Parse the document
         try:
             document_text, file_type = parse_document(spec_path)
@@ -94,6 +129,7 @@ def extract_node(state: DecompositionState) -> DecompositionState:
             return {
                 **state,
                 'extracted_requirements': serialized_requirements,
+                'domain_context': domain_context,  # Phase 7.2: Include loaded domain context
                 'errors': errors,
                 'error_log': error_log,
                 'fallback_count': fallback_count

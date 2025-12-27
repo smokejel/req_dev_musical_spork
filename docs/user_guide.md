@@ -1,7 +1,7 @@
 # Requirements Decomposition System - User Guide
 
-**Version:** 1.1.0 (Phase 4 Complete - MVP Production-Ready)
-**Last Updated:** 2025-11-09
+**Version:** 1.2.0 (Phase 7 Complete - Domain-Aware Requirements)
+**Last Updated:** 2025-12-03
 
 ## Table of Contents
 
@@ -37,11 +37,13 @@ The Requirements Decomposition System is an AI-powered tool that automatically d
 
 - **Automated Decomposition**: Breaks down system requirements into detailed subsystem requirements
 - **Multi-Format Support**: Reads .txt, .docx, and .pdf specification documents
-- **Quality Validation**: Automated scoring across 4 dimensions (completeness, clarity, testability, traceability)
+- **Domain-Aware Processing**: Optional domain-specific conventions, glossary, and templates **NEW (Phase 7)**
+- **Quality Validation**: Automated scoring across 4-5 dimensions (completeness, clarity, testability, traceability, domain compliance)
 - **Human-in-the-Loop**: Review points at quality gates for manual oversight
 - **Full Traceability**: Parent-child requirement mapping in CSV format
 - **Professional Output**: Markdown documentation with organized directory structure
 - **Real-Time Progress**: Live feedback during workflow execution
+- **Configurable Weighting**: Customize quality dimension weights via environment variables **NEW (Phase 7)**
 
 ### Use Cases
 
@@ -65,7 +67,7 @@ The Requirements Decomposition System is an AI-powered tool that automatically d
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd req_dev_musical_spork
+cd req_dev_ARAD
 
 # Install dependencies
 pip install -r requirements.txt
@@ -186,6 +188,28 @@ python main.py spec.txt --subsystem "Safety" --debug
 |--------|------|---------|-------------|
 | `--quality-threshold` | float | 0.80 | Quality gate threshold (0.0-1.0) |
 | `--max-iterations` | int | 3 | Maximum refinement iterations before human review |
+
+### Domain-Aware Options **NEW (Phase 7)**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--domain` | string | generic | Domain name for domain-aware decomposition (e.g., "csx_dispatch") |
+| `--subsystem-id` | string | None | Subsystem identifier within domain (e.g., "train_management") |
+| `--list-domains` | flag | - | List all available domains and exit |
+| `--list-subsystems` | string | - | List subsystems for specified domain and exit |
+
+**Example:**
+```bash
+# List available domains
+python main.py --list-domains
+
+# List subsystems for csx_dispatch domain
+python main.py --list-subsystems csx_dispatch
+
+# Run with domain context
+python main.py spec.txt --subsystem "Train Management" \
+  --domain csx_dispatch --subsystem-id train_management
+```
 
 ### Workflow Options
 
@@ -802,7 +826,7 @@ validate → [FAIL] → HUMAN REVIEW (max iterations reached)
 
 ### Scoring System
 
-Each requirement is scored 0.0-1.0 across 4 dimensions:
+Each requirement is scored 0.0-1.0 across **4 dimensions** (generic) or **5 dimensions** (domain-aware):
 
 #### 1. Completeness (0.0-1.0)
 
@@ -876,12 +900,77 @@ REQ-NAV-001: Calculate routes.
 [No parent ID specified]
 ```
 
+#### 5. Domain Compliance (0.0-1.0) **NEW (Phase 7)**
+
+**Measures:** Adherence to domain-specific conventions, glossary, templates, and naming patterns.
+
+**Applicability:** Only scored when `--domain` is specified (not for generic decomposition).
+
+**Good (0.9+):**
+```
+TM-FR-001: The Train Management subsystem shall maintain an Active Train
+list containing all trains currently operating within the Dispatcher's
+Territory.
+
+✓ ID format follows domain convention (TM-FR-NNN)
+✓ Glossary terms capitalized ("Active Train", "Territory")
+✓ Template structure followed
+✓ Modal verb "shall" used correctly
+```
+
+**Poor (0.5):**
+```
+train-mgmt-001: The system should track active trains in the territory.
+
+✗ ID format incorrect (should be TM-FR-001)
+✗ Glossary terms not capitalized
+✗ Weak modal verb "should" instead of "shall"
+✗ Missing domain-specific context
+```
+
+**Scoring Breakdown:**
+- **Template Format (25%):** Correct structure and sections
+- **Glossary Terms (30%):** Proper capitalization and usage
+- **ID Format (25%):** Follows domain naming convention
+- **Naming Patterns (20%):** Consistent terminology and modal verbs
+
 ### Overall Score
 
-Weighted average of all four dimensions:
-
+**Generic (4 dimensions):**
 ```
 overall_score = (completeness + clarity + testability + traceability) / 4
+```
+
+**Domain-Aware (5 dimensions):**
+```
+overall_score = (completeness + clarity + testability + traceability + domain_compliance) / 5
+```
+
+**Configurable Weighting (Phase 7.3):**
+
+You can customize dimension weights via environment variables (must sum to 1.0):
+
+```bash
+# Generic (4 dimensions - default: 0.25 each)
+QUALITY_WEIGHT_COMPLETENESS=0.25
+QUALITY_WEIGHT_CLARITY=0.25
+QUALITY_WEIGHT_TESTABILITY=0.25
+QUALITY_WEIGHT_TRACEABILITY=0.25
+
+# Domain-Aware (5 dimensions - default: 0.20 each)
+QUALITY_WEIGHT_COMPLETENESS=0.20
+QUALITY_WEIGHT_CLARITY=0.20
+QUALITY_WEIGHT_TESTABILITY=0.20
+QUALITY_WEIGHT_TRACEABILITY=0.20
+QUALITY_WEIGHT_DOMAIN_COMPLIANCE=0.20
+```
+
+Example (prioritize testability):
+```bash
+QUALITY_WEIGHT_COMPLETENESS=0.20
+QUALITY_WEIGHT_CLARITY=0.20
+QUALITY_WEIGHT_TESTABILITY=0.35  # Higher weight
+QUALITY_WEIGHT_TRACEABILITY=0.25
 ```
 
 ### Quality Threshold
@@ -1153,6 +1242,53 @@ Human Review Required
 - Check checkpoint ID spelling
 - Verify checkpoint exists in `checkpoints/` directory
 - Don't use spaces or special characters in checkpoint ID
+
+#### 7. Domain Loading Failure **NEW (Phase 7)**
+
+**Symptom:**
+```
+[1/5] Extracting Requirements...
+  ⚠️ Domain loading failed, using generic domain: Domain 'my_domain' not found
+  ✓ Extracted 15 requirements (8.1s)
+```
+
+**Cause:** Specified domain doesn't exist or has invalid structure
+
+**Solutions:**
+- Use `--list-domains` to see available domains
+- Check domain directory exists: `domains/<domain_name>/`
+- Verify required files present:
+  - `domain_config.json`
+  - `conventions.md`
+  - `glossary.md`
+- Check domain registered in `config/domain_config.py`
+- Verify JSON syntax in `domain_config.json`
+
+**Note:** System automatically falls back to generic domain (4-dimension scoring)
+
+#### 8. Low Domain Compliance Score **NEW (Phase 7)**
+
+**Symptom:**
+```
+Quality Metrics:
+  Domain Compliance: 0.45 ✗ (below 0.80)
+
+Issues:
+  - ID format incorrect: Expected TM-FR-NNN, got TM-001
+  - Glossary terms not capitalized: "active train" should be "Active Train"
+  - Template structure incomplete: Missing Rationale section
+```
+
+**Cause:** Requirements don't follow domain conventions
+
+**Solutions:**
+- **Review domain conventions:** Check `domains/<domain>/conventions.md`
+- **Check glossary:** Ensure terms match `domains/<domain>/glossary.md` capitalization
+- **Verify ID format:** Follow naming pattern in decomposition strategy
+- **Template compliance:** Include all required sections (Description, Acceptance Criteria, Rationale)
+- **Modal verbs:** Use "shall" for requirements, "should" for recommendations
+
+**Tip:** Run without domain first (`--domain generic`) to validate core quality, then add domain for compliance checking.
 
 ### Debug Mode
 
@@ -1530,6 +1666,110 @@ Results Summary:
 
 ---
 
+### Example 5: Domain-Aware Decomposition **NEW (Phase 7)**
+
+**Input:** `examples/csx_dispatch_spec.txt`
+
+```
+System Requirements: CSX Dispatch Train Management System
+==========================================================
+
+SYS-TM-001: The system shall maintain real-time tracking of all active
+trains within the dispatcher's territory.
+
+SYS-TM-002: The system shall provide movement authority management for
+trains entering and exiting track blocks.
+
+SYS-TM-003: The system shall display train positions on the territory
+map with automatic updates every 30 seconds.
+```
+
+**Command:**
+```bash
+# List available domains
+python main.py --list-domains
+
+# List subsystems for csx_dispatch
+python main.py --list-subsystems csx_dispatch
+
+# Run with domain context
+python main.py examples/csx_dispatch_spec.txt \
+  --subsystem "Train Management" \
+  --domain csx_dispatch \
+  --subsystem-id train_management
+```
+
+**Output:** `outputs/run_20251203_094512_train_management/`
+
+**requirements.md (excerpt):**
+```markdown
+## Functional Requirements
+
+### TM-FR-001: Active Train List Maintenance
+**Parent:** SYS-TM-001
+**Type:** Functional
+
+**Description:**
+The Train Management subsystem shall maintain an Active Train list
+containing all trains currently operating within the Dispatcher's Territory.
+
+**Acceptance Criteria:**
+- List updates within 5 seconds of train status change
+- Includes Train ID, current Block, speed, and Movement Authority
+- Supports minimum 50 concurrent Active Trains per Territory
+- Persists across system restarts
+
+**Rationale:**
+Derived from SYS-TM-001 to specify the core data structure for real-time
+train tracking required by CSX dispatch operations.
+
+### TM-FR-002: Movement Authority Assignment
+**Parent:** SYS-TM-002
+**Type:** Functional
+
+**Description:**
+The Train Management subsystem shall assign Movement Authority to trains
+based on Block availability and track conditions.
+
+**Acceptance Criteria:**
+- Movement Authority includes Block ID, entry/exit limits, speed restrictions
+- Updates when Block status changes (clear → occupied)
+- Prevents conflicting authorities for same Block
+- Logs all authority assignments to audit trail
+
+**Rationale:**
+Implements movement authority management from SYS-TM-002 with CSX-specific
+Block-based control logic.
+```
+
+**Quality Metrics:**
+```
+Overall Score: 0.92 (✅ PASSED)
+
+Dimension Breakdown:
+  Completeness:      0.95 ✓
+  Clarity:           0.90 ✓
+  Testability:       0.90 ✓
+  Traceability:      0.95 ✓
+  Domain Compliance: 0.90 ✓  [NEW - 5th dimension]
+
+Domain Compliance Details:
+  ✓ ID format: TM-FR-NNN (correct)
+  ✓ Glossary terms: "Active Train", "Territory", "Block", "Movement Authority" (capitalized)
+  ✓ Template structure: Description, Acceptance Criteria, Rationale (complete)
+  ✓ Modal verbs: "shall" used consistently
+```
+
+**Key Benefits:**
+- **Glossary Term Enforcement:** All domain-specific terms ("Active Train", "Block", "Territory") are automatically capitalized and used consistently
+- **Template Compliance:** Requirements follow CSX Dispatch template structure (Description → Acceptance Criteria → Rationale)
+- **ID Format Validation:** Naming convention (TM-FR-NNN) enforced by domain rules
+- **5th Quality Dimension:** Domain Compliance score (0.90) ensures adherence to CSX standards
+
+**Note:** Without domain context, same spec would score 0.85 (4 dimensions only) and might use inconsistent terminology like "track segment" instead of "Block".
+
+---
+
 ## FAQ
 
 ### General Questions
@@ -1573,6 +1813,59 @@ A: Not recommended. You can set `--quality-threshold 0.0` to effectively disable
 
 **Q: Why does human review keep getting triggered?**
 A: Quality threshold too high, max iterations too low, or input spec quality is poor. Check quality_report.md for specific issues.
+
+### Domain-Aware Questions **NEW (Phase 7)**
+
+**Q: What is domain-aware decomposition?**
+A: Optional feature that injects domain-specific conventions (glossary, templates, naming patterns) into the decomposition process. Enables 5th quality dimension (Domain Compliance) and ensures requirements follow organizational standards.
+
+**Q: How do I list available domains?**
+A: Use `python main.py --list-domains` to see all configured domains. Use `python main.py --list-subsystems <domain>` to see subsystems for a specific domain.
+
+**Q: When should I use domain context vs. generic?**
+A: Use domain context when:
+- You have established organizational standards/glossary
+- Requirements must follow specific templates or naming conventions
+- You want to enforce terminology consistency
+- You need the 5th quality dimension (Domain Compliance)
+
+Use generic (default) for exploratory work or when no domain standards exist.
+
+**Q: What's the difference between 4-dimension and 5-dimension scoring?**
+A:
+- **4 dimensions (generic):** Completeness, Clarity, Testability, Traceability (0.25 weight each)
+- **5 dimensions (domain-aware):** Above + Domain Compliance (0.20 weight each by default)
+
+Domain Compliance checks ID format, glossary term usage, template structure, and naming patterns.
+
+**Q: Can I customize quality dimension weights?**
+A: Yes (Phase 7.3). Set environment variables in `.env`:
+```bash
+QUALITY_WEIGHT_COMPLETENESS=0.30  # Prioritize completeness
+QUALITY_WEIGHT_CLARITY=0.20
+QUALITY_WEIGHT_TESTABILITY=0.25
+QUALITY_WEIGHT_TRACEABILITY=0.25
+# Weights must sum to 1.0
+```
+
+**Q: How do I create my own domain?**
+A:
+1. Create directory: `domains/<domain_name>/`
+2. Add required files:
+   - `domain_config.json` (domain metadata)
+   - `conventions.md` (common conventions)
+   - `glossary.md` (terminology)
+   - `subsystems/<subsystem_id>/` subdirectories
+3. Follow structure in `domains/csx_dispatch/` as reference
+4. Register in `config/domain_config.py`
+
+See `docs/phases/phase7/README.md` for detailed guide.
+
+**Q: Does domain context affect backward compatibility?**
+A: No. Generic (non-domain) decomposition works exactly as before. Domain features are opt-in via `--domain` flag.
+
+**Q: What if domain loading fails?**
+A: System automatically falls back to generic domain with a warning. Check error log for details. Verify domain files exist and are valid.
 
 ### Technical Questions
 

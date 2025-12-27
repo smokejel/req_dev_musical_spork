@@ -14,7 +14,7 @@ The graph includes:
 import time
 import sqlite3
 from pathlib import Path
-from typing import Literal, Dict, Any, Callable
+from typing import Literal, Dict, Any, Callable, Optional
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 from rich.console import Console
@@ -423,9 +423,20 @@ def _execute_node_with_progress(
         raise
 
 
-def create_decomposition_graph() -> StateGraph:
+def create_decomposition_graph(
+    custom_extract_node: Optional[Callable] = None,
+    custom_analyze_node: Optional[Callable] = None,
+    custom_decompose_node: Optional[Callable] = None,
+    custom_validate_node: Optional[Callable] = None,
+) -> StateGraph:
     """
     Create the complete LangGraph workflow for requirements decomposition.
+
+    Args:
+        custom_extract_node: Optional custom extract node function (for instrumentation)
+        custom_analyze_node: Optional custom analyze node function (for instrumentation)
+        custom_decompose_node: Optional custom decompose node function (for instrumentation)
+        custom_validate_node: Optional custom validate node function (for instrumentation)
 
     Graph Structure:
 
@@ -448,16 +459,27 @@ def create_decomposition_graph() -> StateGraph:
 
     Returns:
         Compiled StateGraph with checkpointing enabled
+
+    Note:
+        Custom nodes are used by workflow_runner.py to inject SSE event emission.
+        If not provided, defaults to standard nodes with progress tracking.
     """
     # Initialize graph with state schema
     workflow = StateGraph(DecompositionState)
 
     # Add all nodes with progress tracking
+    # Use custom nodes if provided (for SSE instrumentation), else use defaults
     # Note: human_review doesn't get wrapped (it has its own interactive UI)
-    workflow.add_node("extract", lambda s: _execute_node_with_progress("extract", extract_node, s, 1, 5))
-    workflow.add_node("analyze", lambda s: _execute_node_with_progress("analyze", analyze_node, s, 2, 5))
-    workflow.add_node("decompose", lambda s: _execute_node_with_progress("decompose", decompose_node, s, 3, 5))
-    workflow.add_node("validate", lambda s: _execute_node_with_progress("validate", validate_node, s, 4, 5))
+
+    extract_func = custom_extract_node if custom_extract_node else extract_node
+    analyze_func = custom_analyze_node if custom_analyze_node else analyze_node
+    decompose_func = custom_decompose_node if custom_decompose_node else decompose_node
+    validate_func = custom_validate_node if custom_validate_node else validate_node
+
+    workflow.add_node("extract", lambda s: _execute_node_with_progress("extract", extract_func, s, 1, 5))
+    workflow.add_node("analyze", lambda s: _execute_node_with_progress("analyze", analyze_func, s, 2, 5))
+    workflow.add_node("decompose", lambda s: _execute_node_with_progress("decompose", decompose_func, s, 3, 5))
+    workflow.add_node("validate", lambda s: _execute_node_with_progress("validate", validate_func, s, 4, 5))
     workflow.add_node("human_review", human_review_node)
     workflow.add_node("document", lambda s: _execute_node_with_progress("document", document_node, s, 5, 5))
 

@@ -42,7 +42,7 @@ This system automates requirements engineering by:
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/req_dev_musical_spork.git
-cd req_dev_musical_spork
+cd req_dev_ARAD
 
 # Install dependencies
 pip install -r requirements.txt

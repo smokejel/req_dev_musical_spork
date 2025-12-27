@@ -116,11 +116,16 @@ def validate_node(state: DecompositionState) -> DecompositionState:
         # Step 2: Run LLM-based quality assessment
         try:
             agent = QualityAssuranceAgent()
+
+            # Get domain context from state (Phase 7.2)
+            domain_context = state.get('domain_context')
+
             quality_metrics = agent.assess_quality(
                 requirements=decomposed_requirements,
                 automated_results=automated_results,
                 strategy=decomposition_strategy,
-                enable_fallback=True
+                enable_fallback=True,
+                domain_context=domain_context
             )
 
         except AgentError as e:

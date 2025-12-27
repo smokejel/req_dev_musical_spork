@@ -189,11 +189,17 @@ class QualityMetrics(BaseModel):
         le=1.0,
         description="Proper parent-child linkage (0.0-1.0)"
     )
+    domain_compliance: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Domain conventions and glossary compliance (0.0-1.0). None if generic domain."
+    )
     overall_score: float = Field(
         ...,
         ge=0.0,
         le=1.0,
-        description="Average of all dimensions (0.0-1.0)"
+        description="Weighted average of all dimensions (0.0-1.0)"
     )
     issues: List[QualityIssue] = Field(
         default_factory=list,
@@ -294,6 +300,18 @@ class DecompositionState(TypedDict, total=False):
 
     quality_threshold: float
     """Quality gate threshold (default 0.80)"""
+
+    # ========================================================================
+    # Domain Context (Phase 7 - Domain-Aware Requirements Decomposition)
+    # ========================================================================
+    domain_name: Optional[str]
+    """Domain identifier (e.g., 'csx_dispatch', 'generic'). Default: 'generic'"""
+
+    subsystem_id: Optional[str]
+    """Subsystem identifier within domain (e.g., 'train_management'). Optional."""
+
+    domain_context: Optional[Dict[str, Any]]
+    """Loaded domain context from markdown files (conventions, glossary, examples)"""
 
     # ========================================================================
     # Processing
@@ -398,7 +416,9 @@ def create_initial_state(
     target_subsystem: str,
     review_before_decompose: bool = False,
     quality_threshold: float = 0.80,
-    max_iterations: int = 3
+    max_iterations: int = 3,
+    domain_name: str = "generic",
+    subsystem_id: Optional[str] = None
 ) -> DecompositionState:
     """
     Create an initial state object for starting a decomposition workflow.
@@ -409,6 +429,8 @@ def create_initial_state(
         review_before_decompose: Whether to request review before decomposition
         quality_threshold: Quality gate threshold (0.0-1.0)
         max_iterations: Maximum refinement iterations
+        domain_name: Domain identifier (default: 'generic')
+        subsystem_id: Subsystem identifier within domain (optional)
 
     Returns:
         Initial DecompositionState with required fields populated
@@ -425,6 +447,10 @@ def create_initial_state(
         error_log=[],
         validation_passed=False,
         requires_human_review=False,
+        # Phase 7: Domain context fields
+        domain_name=domain_name,
+        subsystem_id=subsystem_id,
+        domain_context=None,  # Loaded by workflow
         # Phase 4.2: Observability fields
         total_cost=0.0,
         cost_breakdown={},

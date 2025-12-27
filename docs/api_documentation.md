@@ -1,7 +1,7 @@
 # API Documentation
 
-**Version:** 1.2.0 (Phase 5 Complete - Enhanced Observability)
-**Last Updated:** 2025-11-12
+**Version:** 1.3.0 (Phase 7 Complete - Domain-Aware Requirements)
+**Last Updated:** 2025-12-03
 
 ## Table of Contents
 
@@ -522,12 +522,15 @@ class DecompositionState(TypedDict, total=False):
     target_subsystem: str
     review_before_decompose: bool
     quality_threshold: float
+    domain_name: str                              # Phase 7: Domain context (default: "generic")
+    subsystem_id: Optional[str]                   # Phase 7: Subsystem identifier within domain
 
     # Processing
     extracted_requirements: List[Dict[str, Any]]
     system_context: Dict[str, Any]
     decomposition_strategy: Dict[str, Any]
     decomposed_requirements: List[Dict[str, Any]]
+    domain_context: Optional[Dict[str, Any]]      # Phase 7: Loaded domain context (conventions, glossary, examples)
 
     # Quality Control
     quality_metrics: Dict[str, Any]
@@ -560,10 +563,13 @@ class DecompositionState(TypedDict, total=False):
 | `target_subsystem` | str | User input | Subsystem name |
 | `review_before_decompose` | bool | User input | Optional pre-decomposition review flag |
 | `quality_threshold` | float | User input | Quality gate threshold (default 0.80) |
+| `domain_name` | str | User input | Domain name (default: "generic") **Phase 7** |
+| `subsystem_id` | Optional[str] | User input | Subsystem identifier within domain **Phase 7** |
 | `extracted_requirements` | List[Dict] | extract_node | Extracted requirements |
 | `system_context` | Dict | analyze_node | System analysis |
 | `decomposition_strategy` | Dict | analyze_node | Binding strategy (100% enforced) |
 | `decomposed_requirements` | List[Dict] | decompose_node | Detailed requirements |
+| `domain_context` | Optional[Dict] | extract_node | Loaded domain context (conventions, glossary, examples) **Phase 7** |
 | `quality_metrics` | Dict | validate_node | Quality scores |
 | `validation_passed` | bool | validate_node | Quality gate result |
 | `iteration_count` | int | decompose_node | Current iteration (starts at 0) |
@@ -710,15 +716,21 @@ Quality assessment scores and issues.
 
 ```python
 class QualityMetrics(BaseModel):
-    """Quality assessment scores."""
+    """Quality assessment scores (4 or 5 dimensions)."""
 
-    completeness: float       # 0.0-1.0
-    clarity: float           # 0.0-1.0
-    testability: float       # 0.0-1.0
-    traceability: float      # 0.0-1.0
-    overall_score: float     # 0.0-1.0 (average)
-    issues: List[QualityIssue]   # Specific issues found
+    completeness: float            # 0.0-1.0
+    clarity: float                 # 0.0-1.0
+    testability: float             # 0.0-1.0
+    traceability: float            # 0.0-1.0
+    domain_compliance: Optional[float]  # 0.0-1.0 (Phase 7: only for domain-aware)
+    overall_score: float           # 0.0-1.0 (weighted average)
+    issues: List[QualityIssue]     # Specific issues found
 ```
+
+**Note (Phase 7):**
+- **Generic (4 dimensions):** `domain_compliance` is `None`, overall_score computed from 4 dimensions
+- **Domain-Aware (5 dimensions):** `domain_compliance` scored 0.0-1.0, overall_score includes 5th dimension
+- Weights configurable via environment variables (default: equal weighting)
 
 ---
 
@@ -771,7 +783,9 @@ def create_initial_state(
     target_subsystem: str,
     review_before_decompose: bool = False,
     quality_threshold: float = 0.80,
-    max_iterations: int = 3
+    max_iterations: int = 3,
+    domain_name: str = "generic",              # Phase 7
+    subsystem_id: Optional[str] = None         # Phase 7
 ) -> DecompositionState:
     """
     Create initial state object for starting a decomposition workflow.
@@ -782,6 +796,8 @@ def create_initial_state(
         review_before_decompose: Optional pre-decomposition review flag
         quality_threshold: Quality gate threshold (0.0-1.0)
         max_iterations: Maximum refinement iterations
+        domain_name: Domain name for domain-aware decomposition (Phase 7)
+        subsystem_id: Subsystem identifier within domain (Phase 7)
 
     Returns:
         Initial DecompositionState with required fields populated
@@ -819,6 +835,7 @@ class BaseAgent(ABC):
 
     Provides:
         - Skill loading from SKILL.md files
+        - Domain context injection (Phase 7)
         - LLM instantiation with fallback logic
         - Error handling with retry/fallback
         - Execution tracking
@@ -835,6 +852,34 @@ class BaseAgent(ABC):
         Args:
             node_type: Type of workflow node (EXTRACT, ANALYZE, etc.)
             skill_name: Name of skill to load (optional)
+        """
+
+    def get_skill_content(
+        self,
+        domain_context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Load skill content with optional domain context injection (Phase 7).
+
+        If domain_context is provided, injects domain-specific conventions,
+        glossary, and examples between methodology and generic examples.
+
+        Args:
+            domain_context: Optional domain context dict with:
+                - domain_name: Domain name (e.g., "csx_dispatch")
+                - conventions: Domain conventions markdown
+                - glossary: Domain glossary markdown
+                - examples: Domain-specific examples markdown
+
+        Returns:
+            Skill content as string with optional domain injection
+
+        Example structure:
+            [Skill Methodology]
+            [Domain Conventions]  <- Injected if domain_context present
+            [Domain Glossary]     <- Injected if domain_context present
+            [Domain Examples]     <- Injected if domain_context present
+            [Generic Examples]
         """
 
     def execute_with_fallback(
@@ -1024,10 +1069,10 @@ Validates quality of decomposed requirements.
 ```python
 class QualityAssuranceAgent(BaseAgent):
     """
-    Agent for quality validation.
+    Agent for quality validation with optional domain compliance scoring (Phase 7).
 
     Uses:
-        - requirements-quality-validation skill
+        - requirements-quality-validation skill (with 5th dimension support)
         - Gemini 1.5 Pro (primary)
         - Claude 3.5 Sonnet (fallback)
     """
@@ -1036,24 +1081,32 @@ class QualityAssuranceAgent(BaseAgent):
         self,
         decomposed_requirements: List[DetailedRequirement],
         quality_threshold: float,
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        domain_context: Optional[Dict[str, Any]] = None   # Phase 7
     ) -> Tuple[QualityMetrics, bool]:
         """
         Validate quality of decomposed requirements.
 
-        Scores 4 dimensions:
+        Scores 4 or 5 dimensions (Phase 7):
             - Completeness (0.0-1.0)
             - Clarity (0.0-1.0)
             - Testability (0.0-1.0)
             - Traceability (0.0-1.0)
+            - Domain Compliance (0.0-1.0) [only if domain_context provided]
 
         Args:
             decomposed_requirements: Requirements to validate
             quality_threshold: Pass threshold (default 0.80)
             enable_fallback: Enable LLM fallback
+            domain_context: Optional domain context for 5th dimension scoring (Phase 7)
 
         Returns:
             Tuple of (QualityMetrics, validation_passed)
+
+        Overall Score Calculation:
+            - Generic (4D): Equal weighted average (0.25 each)
+            - Domain-Aware (5D): Equal weighted average (0.20 each by default)
+            - Weights configurable via environment variables (Phase 7.3)
 
         Special Cases:
             - Empty list → (1.0 score, True) - valid outcome
@@ -1065,6 +1118,130 @@ class QualityAssuranceAgent(BaseAgent):
 ## Utility Functions
 
 Module: `src/utils/`
+
+### Domain Loader **NEW (Phase 7)**
+
+Module: `src/utils/domain_loader.py`
+
+Loads domain-specific context for domain-aware requirements decomposition.
+
+#### DomainLoader.load_context()
+
+Loads complete domain context with conventions, glossary, and examples.
+
+```python
+class DomainLoader:
+    """Static utility class for loading domain context."""
+
+    @staticmethod
+    def load_context(
+        domain_name: str,
+        subsystem_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Load complete domain context for a specified domain/subsystem.
+
+        Args:
+            domain_name: Domain name (e.g., "csx_dispatch")
+            subsystem_id: Optional subsystem identifier (e.g., "train_management")
+
+        Returns:
+            Dict containing:
+                - domain_name: str
+                - subsystem_id: Optional[str]
+                - conventions: str (markdown content)
+                - glossary: str (markdown content)
+                - examples: str (markdown content, subsystem-specific if provided)
+
+        Raises:
+            DomainLoadError: If domain not found or files invalid
+
+        Example:
+            context = DomainLoader.load_context("csx_dispatch", "train_management")
+            # Returns: {
+            #     "domain_name": "csx_dispatch",
+            #     "subsystem_id": "train_management",
+            #     "conventions": "...",  # Layer 1: Common conventions
+            #     "glossary": "...",     # Layer 1: Domain glossary
+            #     "examples": "..."      # Layer 2: Train Management examples
+            # }
+        """
+```
+
+#### DomainLoader.list_domains()
+
+Lists all available domains.
+
+```python
+@staticmethod
+def list_domains() -> List[Dict[str, Any]]:
+    """
+    List all configured domains with metadata.
+
+    Returns:
+        List of domain dicts with:
+            - name: Domain identifier
+            - display_name: Human-readable name
+            - description: Domain description
+            - subsystems: List of subsystem dicts
+
+    Example:
+        domains = DomainLoader.list_domains()
+        # [
+        #     {
+        #         "name": "csx_dispatch",
+        #         "display_name": "CSX Dispatch",
+        #         "description": "Train dispatch operations",
+        #         "subsystems": [...]
+        #     }
+        # ]
+    """
+```
+
+#### DomainLoader.list_subsystems()
+
+Lists subsystems for a specific domain.
+
+```python
+@staticmethod
+def list_subsystems(domain_name: str) -> List[Dict[str, str]]:
+    """
+    List all subsystems for a domain.
+
+    Args:
+        domain_name: Domain name (e.g., "csx_dispatch")
+
+    Returns:
+        List of subsystem dicts with:
+            - id: Subsystem identifier
+            - name: Human-readable name
+
+    Raises:
+        DomainLoadError: If domain not found
+
+    Example:
+        subsystems = DomainLoader.list_subsystems("csx_dispatch")
+        # [
+        #     {"id": "train_management", "name": "Train Management"},
+        #     {"id": "movement_authority", "name": "Movement Authority"}
+        # ]
+    """
+```
+
+**Domain File Structure:**
+
+```
+domains/
+└── <domain_name>/
+    ├── domain_config.json          # Domain metadata
+    ├── conventions.md              # Layer 1: Common conventions
+    ├── glossary.md                 # Layer 1: Domain glossary
+    └── subsystems/
+        └── <subsystem_id>/
+            └── examples.md         # Layer 2: Subsystem examples
+```
+
+---
 
 ### Document Parser
 
@@ -1780,8 +1957,17 @@ class CostTracker:
             }
         """
 
-    def finalize_run(self, run_id: str, cost_source: str = "heuristic") -> float:
-        """Complete run and return total cost."""
+    def finalize_run(self, subsystem: str, source_method: str = 'heuristic') -> CostRecord:
+        """
+        Finalize current run and store in database.
+
+        Args:
+            subsystem: Target subsystem for this run
+            source_method: 'langsmith' or 'heuristic' (default: 'heuristic')
+
+        Returns:
+            CostRecord: Complete run information including costs, tokens, and metadata
+        """
 
     def get_recent_runs(self, days: int = 30) -> List[Dict]:
         """Retrieve recent run cost history."""

@@ -134,9 +134,12 @@ class SystemArchitectAgent(BaseAgent):
 
         requirements_text = "\n".join(req_list)
 
+        # Get skill content (domain context not needed for system analysis, so pass None)
+        skill_content = self.get_skill_content(None)
+
         prompt = f"""You are a System Architect Agent. Your task is to analyze system-level requirements and create a binding decomposition strategy for the target subsystem.
 
-{self.skill_content}
+{skill_content}
 
 ---
 

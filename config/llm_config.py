@@ -69,8 +69,8 @@ GPT_4O = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.0025,
     cost_per_1k_output=0.01,
-    energy_per_1k_input_wh=0.0006,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
-    energy_per_1k_output_wh=0.0006,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens
+    energy_per_1k_input_wh=0.6,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens = 0.6 Wh per 1K tokens
+    energy_per_1k_output_wh=0.6,  # Epoch AI (Feb 2025) - 0.3 Wh per 500 tokens = 0.6 Wh per 1K tokens
     description="GPT-4 Optimized - Best for complex reasoning tasks"
 )
 
@@ -81,8 +81,8 @@ GPT_4O_MINI = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.00015,
     cost_per_1k_output=0.0006,
-    energy_per_1k_input_wh=0.00015,  # Estimated (4x smaller than GPT-4o)
-    energy_per_1k_output_wh=0.00015,  # Estimated (4x smaller than GPT-4o)
+    energy_per_1k_input_wh=0.15,  # Estimated (4x smaller than GPT-4o: 0.6 / 4 = 0.15 Wh per 1K tokens)
+    energy_per_1k_output_wh=0.15,  # Estimated (4x smaller than GPT-4o: 0.6 / 4 = 0.15 Wh per 1K tokens)
     description="GPT-4 Mini - Cost-effective for structured extraction"
 )
 
@@ -93,8 +93,8 @@ GPT_5_NANO = ModelConfig(
     max_tokens=32768,  # 32K+ output tokens per MODEL_DEFINITIONS.md
     cost_per_1k_input=0.0001,  # Estimate - most cost-efficient GPT-5 variant
     cost_per_1k_output=0.0005,  # Estimate - verify from OpenAI pricing
-    energy_per_1k_input_wh=0.0003,  # Estimated (efficient variant, ~50% of GPT-4o)
-    energy_per_1k_output_wh=0.0003,  # Estimated (efficient variant, ~50% of GPT-4o)
+    energy_per_1k_input_wh=0.3,  # Estimated (efficient variant, ~50% of GPT-4o: 0.6 / 2 = 0.3 Wh per 1K tokens)
+    energy_per_1k_output_wh=0.3,  # Estimated (efficient variant, ~50% of GPT-4o: 0.6 / 2 = 0.3 Wh per 1K tokens)
     description="GPT-5 Nano - Fastest, most cost-efficient GPT-5 variant"
 )
 
@@ -106,8 +106,8 @@ CLAUDE_SONNET_4_5 = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.003,
     cost_per_1k_output=0.015,
-    energy_per_1k_input_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
-    energy_per_1k_output_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
+    energy_per_1k_input_wh=0.7,  # Conservative estimate (similar to GPT-4 class, ~0.7 Wh per 1K tokens)
+    energy_per_1k_output_wh=0.7,  # Conservative estimate (similar to GPT-4 class, ~0.7 Wh per 1K tokens)
     description="Claude Sonnet 4.5 - Excellent for analysis and validation"
 )
 
@@ -118,8 +118,8 @@ CLAUDE_SONNET_3_5 = ModelConfig(
     max_tokens=8192,
     cost_per_1k_input=0.003,
     cost_per_1k_output=0.015,
-    energy_per_1k_input_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
-    energy_per_1k_output_wh=0.0007,  # Conservative estimate (similar to GPT-4 class)
+    energy_per_1k_input_wh=0.7,  # Conservative estimate (similar to GPT-4 class, ~0.7 Wh per 1K tokens)
+    energy_per_1k_output_wh=0.7,  # Conservative estimate (similar to GPT-4 class, ~0.7 Wh per 1K tokens)
     description="Claude Sonnet 4.5 - Strong architectural reasoning"
 )
 
@@ -131,8 +131,8 @@ GEMINI_2_5_FLASH_LITE = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0001,  # Ultra cost-efficient (verify from pricing page)
     cost_per_1k_output=0.0004,  # Ultra cost-efficient (verify from pricing page)
-    energy_per_1k_input_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
-    energy_per_1k_output_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
+    energy_per_1k_input_wh=0.48,  # Google (Aug 2025) - 0.24 Wh per 500 tokens = 0.48 Wh per 1K tokens
+    energy_per_1k_output_wh=0.48,  # Google (Aug 2025) - 0.24 Wh per 500 tokens = 0.48 Wh per 1K tokens
     description="Gemini 2.5 Flash-Lite - Ultra fast, 1M context, most cost-efficient"
 )
 
@@ -143,8 +143,8 @@ GEMINI_2_5_FLASH = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0002,  # Best price-performance (verify from pricing page)
     cost_per_1k_output=0.0008,  # Best price-performance (verify from pricing page)
-    energy_per_1k_input_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
-    energy_per_1k_output_wh=0.00048,  # Google (Aug 2025) - 0.24 Wh per 500 tokens
+    energy_per_1k_input_wh=0.48,  # Google (Aug 2025) - 0.24 Wh per 500 tokens = 0.48 Wh per 1K tokens
+    energy_per_1k_output_wh=0.48,  # Google (Aug 2025) - 0.24 Wh per 500 tokens = 0.48 Wh per 1K tokens
     description="Gemini 2.5 Flash - Best price-performance, 1M context window"
 )
 
@@ -155,8 +155,8 @@ GEMINI_2_5_PRO = ModelConfig(
     max_tokens=65536,  # 65K output tokens, 1M total context window
     cost_per_1k_input=0.0005,  # State-of-the-art thinking (verify from pricing page)
     cost_per_1k_output=0.002,   # State-of-the-art thinking (verify from pricing page)
-    energy_per_1k_input_wh=0.0006,  # Estimated (+25% vs Flash for advanced reasoning)
-    energy_per_1k_output_wh=0.0006,  # Estimated (+25% vs Flash for advanced reasoning)
+    energy_per_1k_input_wh=0.6,  # Estimated (+25% vs Flash: 0.48 * 1.25 = 0.6 Wh per 1K tokens)
+    energy_per_1k_output_wh=0.6,  # Estimated (+25% vs Flash: 0.48 * 1.25 = 0.6 Wh per 1K tokens)
     description="Gemini 2.5 Pro - State-of-the-art thinking model, 1M context"
 )
 
@@ -181,28 +181,28 @@ NODE_MODELS = {
         node_type=NodeType.EXTRACT,
         primary_model=GEMINI_2_5_FLASH_LITE,
         fallback_models=[GEMINI_2_5_FLASH, GPT_4O, CLAUDE_SONNET_4_5],
-        rationale="Ultra-fast with 1M context window. Handles 88K+ token PDFs efficiently (tested: 396 reqs extracted in 70s). Most cost-efficient option. Note: Free tier has 250K token/min quota."
+        rationale="Fast with 1M context window"
     ),
 
     NodeType.ANALYZE: NodeModelConfig(
         node_type=NodeType.ANALYZE,
         primary_model=CLAUDE_SONNET_3_5,
         fallback_models=[GPT_4O, CLAUDE_SONNET_4_5],
-        rationale="Architectural reasoning and context understanding. Claude excels at system-level analysis."
+        rationale="Architectural reasoning and context understanding"
     ),
 
     NodeType.DECOMPOSE: NodeModelConfig(
         node_type=NodeType.DECOMPOSE,
         primary_model=GPT_5_NANO,
         fallback_models=[GPT_4O, CLAUDE_SONNET_4_5],
-        rationale="GPT-5 Nano - Fastest, most cost-efficient with higher rate limits. Handles large requirement sets (tested: 396 requirements = 31K tokens) without TPM constraints. No rate limit issues observed."
+        rationale="GPT-5 Nano, most cost-efficient with higher rate limits"
     ),
 
     NodeType.VALIDATE: NodeModelConfig(
         node_type=NodeType.VALIDATE,
         primary_model=GEMINI_2_5_FLASH,
         fallback_models=[CLAUDE_SONNET_4_5, GPT_4O],
-        rationale="Best price-performance for quality validation. 1M context window handles large requirement sets. Balanced speed and accuracy. Quality scores: 0.85-0.99 in testing."
+        rationale="Fast with 1M context window"
     )
 }
 

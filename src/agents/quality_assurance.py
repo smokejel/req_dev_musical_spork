@@ -40,7 +40,8 @@ class QualityAssuranceAgent(BaseAgent):
         requirements: List[Dict[str, Any]],
         automated_results: Dict[str, Any],
         strategy: Dict[str, Any],
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        domain_context: Dict[str, Any] = None
     ) -> QualityMetrics:
         """
         Execute the agent's main task (assess quality).
@@ -52,6 +53,7 @@ class QualityAssuranceAgent(BaseAgent):
             automated_results: Results from automated quality checker
             strategy: Decomposition strategy for context
             enable_fallback: Whether to enable model fallback on errors
+            domain_context: Optional domain context for domain compliance scoring
 
         Returns:
             QualityMetrics object with scores and issues
@@ -63,7 +65,8 @@ class QualityAssuranceAgent(BaseAgent):
             requirements,
             automated_results,
             strategy,
-            enable_fallback
+            enable_fallback,
+            domain_context
         )
 
     def assess_quality(
@@ -71,7 +74,8 @@ class QualityAssuranceAgent(BaseAgent):
         requirements: List[Dict[str, Any]],
         automated_results: Dict[str, Any],
         strategy: Dict[str, Any],
-        enable_fallback: bool = True
+        enable_fallback: bool = True,
+        domain_context: Dict[str, Any] = None
     ) -> QualityMetrics:
         """
         Assess requirements quality using LLM-based evaluation.
@@ -81,6 +85,7 @@ class QualityAssuranceAgent(BaseAgent):
             automated_results: Results from automated quality checker
             strategy: Decomposition strategy for context
             enable_fallback: Whether to enable model fallback on errors
+            domain_context: Optional domain context for domain compliance scoring
 
         Returns:
             QualityMetrics object with scores and issues
@@ -99,14 +104,18 @@ class QualityAssuranceAgent(BaseAgent):
         prompt = self._build_assessment_prompt(
             requirements,
             automated_results,
-            strategy
+            strategy,
+            domain_context
         )
+
+        # Determine if domain context is present
+        has_domain = domain_context and domain_context.get('domain_name') != 'generic'
 
         # Define the execution function
         def execute_assessment(llm):
             """Inner function that performs the assessment with a given LLM."""
             response = llm.invoke(prompt)
-            return self._parse_assessment_response(response.content)
+            return self._parse_assessment_response(response.content, has_domain_context=has_domain)
 
         # Execute with fallback support
         try:
@@ -123,7 +132,8 @@ class QualityAssuranceAgent(BaseAgent):
         self,
         requirements: List[Dict[str, Any]],
         automated_results: Dict[str, Any],
-        strategy: Dict[str, Any]
+        strategy: Dict[str, Any],
+        domain_context: Dict[str, Any] = None
     ) -> str:
         """
         Build the prompt for quality assessment.
@@ -132,6 +142,7 @@ class QualityAssuranceAgent(BaseAgent):
             requirements: List of requirement dicts
             automated_results: Automated validation results
             strategy: Decomposition strategy
+            domain_context: Optional domain context for domain compliance
 
         Returns:
             Formatted prompt string
@@ -150,9 +161,16 @@ class QualityAssuranceAgent(BaseAgent):
         # Format strategy
         strategy_text = json.dumps(strategy, indent=2)
 
-        prompt = f"""You are a Quality Assurance Agent. Your task is to assess the quality of decomposed requirements across four dimensions and provide detailed feedback.
+        # Get skill content with domain context injected
+        skill_content = self.get_skill_content(domain_context)
 
-{self.skill_content}
+        # Determine dimensions based on domain context
+        has_domain = domain_context and domain_context.get('domain_name') != 'generic'
+        dimensions_text = "5 dimensions (completeness, clarity, testability, traceability, domain_compliance)" if has_domain else "4 dimensions (completeness, clarity, testability, traceability)"
+
+        prompt = f"""You are a Quality Assurance Agent. Your task is to assess the quality of decomposed requirements across {dimensions_text} and provide detailed feedback.
+
+{skill_content}
 
 ---
 
@@ -176,7 +194,7 @@ class QualityAssuranceAgent(BaseAgent):
 ```
 
 **Instructions**:
-1. Assess each requirement across all 4 quality dimensions (completeness, clarity, testability, traceability)
+1. Assess each requirement across all quality dimensions ({dimensions_text})
 2. Consider the automated validation results in your assessment
 3. Assign scores (0.0-1.0) for each dimension
 4. Identify specific quality issues with severity (critical, major, minor)
@@ -187,6 +205,7 @@ class QualityAssuranceAgent(BaseAgent):
 - Use the automated results as a starting point but perform your own analysis
 - Be specific in issue descriptions (reference requirement IDs)
 - Provide actionable suggestions (tell how to fix, not just what's wrong)
+{"- For domain_compliance: Check ID format, glossary term capitalization, requirement statement structure, and modal verbs as defined in domain context" if has_domain else ""}
 - Do NOT include any markdown formatting, explanations, or additional text
 - Return ONLY the JSON object
 
@@ -196,13 +215,15 @@ Output the JSON object now:"""
 
     def _parse_assessment_response(
         self,
-        response_text: str
+        response_text: str,
+        has_domain_context: bool = False
     ) -> QualityMetrics:
         """
         Parse the LLM response into a QualityMetrics object.
 
         Args:
             response_text: Raw LLM response
+            has_domain_context: Whether domain context was provided (for score recalculation)
 
         Returns:
             QualityMetrics object
@@ -244,13 +265,24 @@ Output the JSON object now:"""
                 )
                 issues.append(issue)
 
-            # Create QualityMetrics object
+            # Recalculate overall_score using configured weights (Phase 7.3)
+            from config.quality_config import QualityConfig
+            overall_score = QualityConfig.compute_weighted_score(
+                completeness=data['completeness'],
+                clarity=data['clarity'],
+                testability=data['testability'],
+                traceability=data['traceability'],
+                domain_compliance=data.get('domain_compliance')
+            )
+
+            # Create QualityMetrics object with recalculated overall_score
             quality_metrics = QualityMetrics(
                 completeness=data['completeness'],
                 clarity=data['clarity'],
                 testability=data['testability'],
                 traceability=data['traceability'],
-                overall_score=data['overall_score'],
+                domain_compliance=data.get('domain_compliance'),
+                overall_score=overall_score,  # Use recalculated score
                 issues=issues
             )
 

@@ -19,6 +19,7 @@ from langchain_core.language_models import BaseChatModel
 from src.utils.skill_loader import load_skill, SkillLoadError
 from src.utils.langsmith_integration import extract_tokens_from_response
 from src.utils.cost_tracker import get_cost_tracker
+from src.utils.domain_loader import DomainLoader
 from src.state import ErrorType, ErrorLog
 from config.llm_config import (
     ModelConfig,
@@ -91,12 +92,18 @@ class BaseAgent(ABC):
         except SkillLoadError as e:
             raise AgentError(f"Failed to load skill '{self.skill_name}': {str(e)}")
 
-    def get_skill_content(self) -> str:
+    def get_skill_content(self, domain_context: Optional[Dict[str, Any]] = None) -> str:
         """
-        Get the loaded skill content.
+        Get the loaded skill content, optionally with domain context injected.
+
+        If domain_context is provided, injects domain-specific guidance between
+        the methodology section and examples section of the skill.
+
+        Args:
+            domain_context: Optional domain context dict from DomainLoader.load_context()
 
         Returns:
-            Skill content as string
+            Skill content as string, with domain context injected if provided
 
         Raises:
             AgentError: If no skill is loaded
@@ -105,7 +112,50 @@ class BaseAgent(ABC):
             raise AgentError(
                 f"No skill loaded. Initialize agent with skill_name parameter."
             )
-        return self.skill_content
+
+        # If no domain context or generic domain, return original skill
+        if not domain_context or domain_context.get('domain_name') == 'generic':
+            return self.skill_content
+
+        # Build domain context section
+        from config.domain_config import registry
+        domain_name = domain_context.get('domain_name')
+        subsystem_id = domain_context.get('subsystem_id')
+
+        # Get subsystem name for header
+        subsystem_name = ""
+        if domain_name and subsystem_id:
+            domain = registry.get_domain(domain_name)
+            if domain and subsystem_id in domain.subsystems:
+                subsystem_name = domain.subsystems[subsystem_id].name
+
+        # Build the domain section
+        domain_section = DomainLoader.build_skill_prompt_section(
+            domain_context,
+            subsystem_name=subsystem_name
+        )
+
+        if not domain_section:
+            return self.skill_content
+
+        # Inject domain context between methodology and examples
+        # Look for common section markers
+        markers = [
+            "\n## Examples\n",
+            "\n# Examples\n",
+            "\n## Example\n",
+            "\n# Example\n",
+            "\n## Reference Examples\n"
+        ]
+
+        for marker in markers:
+            if marker in self.skill_content:
+                parts = self.skill_content.split(marker, 1)
+                injected = f"{parts[0]}\n\n{domain_section}\n{marker}{parts[1]}"
+                return injected
+
+        # If no examples section found, append at the end
+        return f"{self.skill_content}\n\n{domain_section}"
 
     def _create_llm(self, model_config: ModelConfig) -> BaseChatModel:
         """

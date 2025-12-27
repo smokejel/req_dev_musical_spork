@@ -1,0 +1,8 @@
+SYSTEM SPECIFICATION: Test Navigation System
+
+The system shall provide basic navigation capabilities.
+
+Requirements:
+1. The system shall display current GPS coordinates
+2. The system shall calculate distance to destination
+3. The system shall provide turn-by-turn directions

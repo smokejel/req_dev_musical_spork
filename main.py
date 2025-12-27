@@ -142,6 +142,32 @@ For more information, see docs/user_guide.md
         help='Suppress progress output (errors only)'
     )
 
+    # Domain-aware arguments (Phase 7)
+    parser.add_argument(
+        '--domain',
+        type=str,
+        help='Domain name for domain-aware decomposition (e.g., "csx_dispatch"). Default: generic'
+    )
+
+    parser.add_argument(
+        '--subsystem-id',
+        type=str,
+        help='Subsystem identifier within domain (e.g., "train_management")'
+    )
+
+    parser.add_argument(
+        '--list-domains',
+        action='store_true',
+        help='List all available domains and exit'
+    )
+
+    parser.add_argument(
+        '--list-subsystems',
+        type=str,
+        metavar='DOMAIN',
+        help='List subsystems for specified domain and exit'
+    )
+
     return parser.parse_args()
 
 
@@ -196,6 +222,23 @@ def validate_arguments(args):
         console.print(f"[red]Error: --resume requires --checkpoint-id[/red]")
         sys.exit(1)
 
+    # Validate domain configuration (Phase 7)
+    if args.domain:
+        from config.domain_config import registry
+
+        domain = registry.get_domain(args.domain)
+        if not domain:
+            console.print(f"[red]Error: Domain '{args.domain}' not found[/red]")
+            console.print(f"[dim]Use --list-domains to see available domains[/dim]")
+            sys.exit(1)
+
+        # If subsystem_id specified, validate it exists in domain
+        if args.subsystem_id:
+            if args.subsystem_id not in domain.subsystems:
+                console.print(f"[red]Error: Subsystem '{args.subsystem_id}' not found in domain '{args.domain}'[/red]")
+                console.print(f"[dim]Use --list-subsystems {args.domain} to see available subsystems[/dim]")
+                sys.exit(1)
+
 
 def display_welcome():
     """Display welcome banner."""
@@ -224,6 +267,13 @@ def display_configuration(args):
     config_table.add_row("Quality Threshold", f"{args.quality_threshold:.2f}")
     config_table.add_row("Max Iterations", str(args.max_iterations))
     config_table.add_row("Pre-Decomposition Review", "Yes" if args.review_before_decompose else "No")
+
+    # Phase 7.2: Display domain information
+    if args.domain and args.domain != "generic":
+        domain_display = args.domain
+        if args.subsystem_id:
+            domain_display += f" / {args.subsystem_id}"
+        config_table.add_row("Domain Context", domain_display)
 
     console.print(config_table)
     console.print()
@@ -402,6 +452,52 @@ def display_results(final_state):
         console.print()
 
 
+def handle_list_domains():
+    """Display all available domains and exit."""
+    from config.domain_config import registry
+
+    domains = registry.list_domains()
+
+    console.print("\n[bold]Available Domains:[/bold]\n")
+
+    for domain_name in domains:
+        domain = registry.get_domain(domain_name)
+        console.print(f"  • [cyan]{domain_name}[/cyan]: {domain.description}")
+
+    console.print()
+
+
+def handle_list_subsystems(domain_name: str):
+    """
+    Display all subsystems for a given domain and exit.
+
+    Args:
+        domain_name: Domain identifier
+    """
+    from config.domain_config import registry
+
+    domain = registry.get_domain(domain_name)
+    if not domain:
+        console.print(f"[red]Error: Domain '{domain_name}' not found[/red]")
+        console.print(f"[dim]Use --list-domains to see available domains[/dim]\n")
+        sys.exit(1)
+
+    subsystems = registry.list_subsystems(domain_name)
+
+    if not subsystems:
+        console.print(f"\n[yellow]Domain '{domain_name}' has no registered subsystems[/yellow]\n")
+        sys.exit(0)
+
+    console.print(f"\n[bold]Subsystems in {domain.description}:[/bold]\n")
+
+    for subsystem_id in subsystems:
+        subsystem = domain.subsystems[subsystem_id]
+        console.print(f"  • [cyan]{subsystem_id}[/cyan]: {subsystem.name}")
+        console.print(f"    [dim]{subsystem.description}[/dim]")
+
+    console.print()
+
+
 def main():
     """
     Main CLI entry point.
@@ -415,6 +511,15 @@ def main():
     """
     # Parse arguments
     args = parse_arguments()
+
+    # Handle domain listing commands (Phase 7)
+    if args.list_domains:
+        handle_list_domains()
+        sys.exit(0)
+
+    if args.list_subsystems:
+        handle_list_subsystems(args.list_subsystems)
+        sys.exit(0)
 
     # Handle visualize mode
     if args.visualize:
@@ -442,7 +547,10 @@ def main():
             target_subsystem=args.subsystem,
             quality_threshold=args.quality_threshold,
             max_iterations=args.max_iterations,
-            review_before_decompose=args.review_before_decompose
+            review_before_decompose=args.review_before_decompose,
+            # Phase 7.2: Domain parameters
+            domain_name=args.domain or "generic",
+            subsystem_id=args.subsystem_id
         )
 
         # Generate checkpoint ID

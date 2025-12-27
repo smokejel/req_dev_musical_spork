@@ -19,6 +19,7 @@ RUN apt-get update && \
 
 # Copy requirements first for better caching
 COPY requirements.txt .
+COPY requirements-api.txt .
 
 # Install Python dependencies to /app/.venv
 # Using a virtual environment allows us to copy only necessary files to runtime stage

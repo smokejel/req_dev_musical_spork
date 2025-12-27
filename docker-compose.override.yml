@@ -2,8 +2,6 @@
 # Development overrides - automatically loaded by docker-compose
 # Enables live code editing without rebuilding the Docker image
 
-version: '3.8'
-
 services:
   req-decomp:
     # Mount source code for live development

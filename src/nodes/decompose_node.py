@@ -67,11 +67,20 @@ def decompose_node(state: DecompositionState) -> DecompositionState:
         # Step 1: Decompose requirements using agent
         try:
             agent = RequirementsEngineerAgent()
+
+            # Get domain context from state (Phase 7.2)
+            domain_context = state.get('domain_context')
+
+            # Get human feedback from state (if revision was requested)
+            human_feedback = state.get('human_feedback')
+
             detailed_requirements = agent.decompose_requirements(
                 system_requirements=extracted_requirements,
                 decomposition_strategy=decomposition_strategy,
                 target_subsystem=target_subsystem,
-                enable_fallback=True
+                enable_fallback=True,
+                domain_context=domain_context,
+                human_feedback=human_feedback
             )
 
             # Step 2: Validate strategy adherence

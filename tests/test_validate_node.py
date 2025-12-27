@@ -73,7 +73,7 @@ class TestStateValidation:
         assert 'decomposition_strategy' in result['errors'][0]
 
     def test_empty_decomposed_requirements_raises_error(self):
-        """Test that empty decomposed requirements list raises error."""
+        """Test that empty decomposed requirements list is handled as valid (none allocated)."""
         state = DecompositionState(
             decomposed_requirements=[],
             extracted_requirements=[{"id": "SYS-001", "text": "Test"}],
@@ -82,8 +82,10 @@ class TestStateValidation:
 
         result = validate_node(state)
 
-        assert 'errors' in result
-        assert 'empty' in result['errors'][0].lower()
+        # Empty requirements are valid (Phase 6 behavior: no requirements allocated to subsystem)
+        assert result['validation_passed'] is True
+        assert result['quality_metrics']['overall_score'] == 1.0
+        assert result['quality_metrics']['validation_type'] == 'no_requirements_allocated'
 
 
 # =======================================================================
@@ -664,17 +666,19 @@ class TestErrorHandling:
         assert result['requires_human_review'] is True
 
     def test_error_log_populated_on_failure(self):
-        """Test that error log is populated on failure."""
+        """Test that error log is populated on actual failure (missing required fields)."""
+        # Missing both extracted_requirements and decomposition_strategy = actual error
         state = DecompositionState(
-            decomposed_requirements=[],
-            extracted_requirements=[],
-            decomposition_strategy={}
+            decomposed_requirements=[{"id": "TEST-001", "text": "Test"}]
+            # Missing extracted_requirements
+            # Missing decomposition_strategy
         )
 
         result = validate_node(state)
 
         assert 'error_log' in result
         assert len(result['error_log']) > 0
+        assert result['requires_human_review'] is True
 
     def test_node_continues_after_feedback_generation_failure(self):
         """Test that node continues if feedback generation fails."""

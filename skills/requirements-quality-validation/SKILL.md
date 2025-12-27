@@ -1,7 +1,9 @@
 # Requirements Quality Validation Methodology
 
 ## Purpose
-Assess the quality of decomposed requirements against four critical dimensions and provide actionable feedback for improvement. This skill guides both automated and LLM-based quality validation to ensure requirements meet professional standards before delivery.
+Assess the quality of decomposed requirements against critical dimensions and provide actionable feedback for improvement. This skill guides both automated and LLM-based quality validation to ensure requirements meet professional standards before delivery.
+
+**Note**: When domain context is provided, requirements are scored on **5 dimensions**. For generic (non-domain) requirements, only the first 4 dimensions apply.
 
 ## Role
 You are a **Quality Assurance Agent** responsible for validating decomposed requirements and generating specific feedback to improve quality through iterative refinement.
@@ -11,12 +13,14 @@ You are a **Quality Assurance Agent** responsible for validating decomposed requ
 - Traceability matrix (parent-child relationships)
 - Decomposition strategy (for validation context)
 - Automated validation results (structural checks)
+- Domain context (optional: conventions, glossary, examples)
 
 ## Quality Dimensions
 
-Requirements are scored on four dimensions, each weighted equally (25%). Each dimension is scored 0.0-1.0:
+**Generic Requirements (4 dimensions)**: Each weighted equally at 25%, scored 0.0-1.0
+**Domain-Aware Requirements (5 dimensions)**: Each weighted equally at 20%, scored 0.0-1.0
 
-### 1. Completeness (25%)
+### 1. Completeness (25% generic, 20% domain-aware)
 
 **Definition**: All aspects are covered, no gaps, complete parent-child coverage.
 
@@ -58,7 +62,7 @@ Coverage: Incomplete
 
 ---
 
-### 2. Clarity (25%)
+### 2. Clarity (25% generic, 20% domain-aware)
 
 **Definition**: Unambiguous, understandable language; precise terms; single interpretation.
 
@@ -97,7 +101,7 @@ Coverage: Incomplete
 
 ---
 
-### 3. Testability (25%)
+### 3. Testability (25% generic, 20% domain-aware)
 
 **Definition**: Clear, measurable acceptance criteria; observable behavior; verifiable pass/fail conditions.
 
@@ -153,7 +157,7 @@ Test Approach: Unclear how to verify "correctly"
 
 ---
 
-### 4. Traceability (25%)
+### 4. Traceability (25% generic, 20% domain-aware)
 
 **Definition**: Valid parent-child links; clear rationale; proper subsystem assignment; ID format compliance.
 
@@ -193,6 +197,103 @@ Test Approach: Unclear how to verify "correctly"
   "rationale": ""  // No rationale
 }
 ```
+
+---
+
+### 5. Domain Compliance (0% generic, 20% domain-aware)
+
+**Definition**: Adherence to domain-specific conventions, glossary term usage, template format, and naming patterns.
+
+**Applicability**: This dimension is **ONLY scored when domain context is provided**. For generic (non-domain) requirements, this dimension is omitted and the other 4 dimensions are weighted at 25% each.
+
+**Scoring Guidelines**:
+- **1.0 (Excellent)**: Perfect adherence to all domain conventions; all glossary terms capitalized correctly; template format followed exactly; naming patterns correct
+- **0.9 (Very Good)**: 1-2 minor convention violations (e.g., missed glossary term capitalization)
+- **0.8 (Good)**: 3-5 minor violations; no structural template issues
+- **0.7 (Fair)**: Multiple convention violations; some template format issues
+- **0.6 (Marginal)**: Significant violations; inconsistent glossary usage
+- **0.5 (Poor)**: Major violations; template format not followed
+- **0.0 (Unacceptable)**: Complete disregard for domain conventions
+
+**Validation Checks** (when domain context provided):
+
+**Template Format Compliance**:
+- [ ] Requirement statement follows domain template (e.g., "The {Subsystem} shall...")
+- [ ] Required sections present (rationale, acceptance criteria, etc.)
+- [ ] Structure matches domain examples
+
+**Glossary Term Compliance**:
+- [ ] All domain glossary terms are capitalized correctly
+- [ ] Terms used consistently across requirements
+- [ ] No synonyms used for glossary terms (e.g., don't use "train" if glossary defines "Active Train")
+
+**ID Format Compliance**:
+- [ ] Requirement IDs follow domain naming convention exactly
+- [ ] Subsystem prefix correct (e.g., "TM-" for Train Management)
+- [ ] Type codes match domain conventions (e.g., "FUNC", "PERF", "CONFIG")
+- [ ] Sequential numbering follows domain pattern
+
+**Configuration Parameter Naming** (if applicable):
+- [ ] Configuration parameters follow domain pattern (e.g., "TM.{FEATURE}.{PROPERTY}")
+- [ ] Boolean parameters use correct naming (e.g., ".VISIBLE", ".MANDATORY")
+- [ ] Default values documented in acceptance criteria
+
+**Event Naming** (if applicable):
+- [ ] Events follow domain pattern (e.g., "EV-TM.{FEATURE}.{ACTION}")
+- [ ] Event data includes required context fields
+- [ ] Event distribution documented
+
+**Examples**:
+
+**Excellent Domain Compliance (Score: 1.0)** - CSX Dispatch Train Management:
+```json
+{
+  "id": "TM-FUNC-015",  // ✓ Correct format: TM-{TYPE}-{NNN}
+  "text": "The Train Management Subsystem shall display the Departure Checklist when an Authorized User initiates departure for an Active Train.",  // ✓ Correct template, capitalized glossary terms
+  "type": "FUNC",
+  "subsystem": "Train Management",
+  "parent_id": "UC-TM-040",
+  "rationale": "Decomposes UC-TM-040 by allocating checklist display to Train Management per allocation rules.",
+  "acceptance_criteria": [
+    "Departure Checklist displayed within 2 seconds of initiation",  // ✓ Glossary term capitalized
+    "Checklist contains Job Briefing, Work Locations, Train Consist sections",  // ✓ All glossary terms capitalized
+    "Information Notification Event EV-TM.CHECKLIST.INITIATED generated"  // ✓ Event naming pattern followed
+  ]
+}
+```
+
+**Poor Domain Compliance (Score: 0.5)** - CSX Dispatch Train Management:
+```json
+{
+  "id": "tm-func-15",  // ❌ Wrong case, wrong format
+  "text": "The system shall show a checklist when user starts departure.",  // ❌ Wrong template ("system" not "Train Management Subsystem"), glossary terms not capitalized
+  "type": "FUNC",
+  "subsystem": "TM",  // ❌ Wrong subsystem name
+  "parent_id": "UC-TM-040",
+  "rationale": "Shows checklist",  // ❌ No decomposition rationale
+  "acceptance_criteria": [
+    "Checklist appears quickly",  // ❌ Vague, no metrics
+    "Has job briefing and work locations"  // ❌ Glossary terms not capitalized
+  ]
+}
+```
+
+**Scoring Rubric** (when domain context provided):
+
+| Aspect | Weight | Excellent (1.0) | Good (0.8) | Fair (0.6) | Poor (0.3) |
+|--------|--------|-----------------|------------|------------|------------|
+| Template Format | 25% | Perfect adherence | 1-2 minor issues | Multiple format issues | Template not followed |
+| Glossary Terms | 30% | All capitalized correctly | 95%+ correct | 80%+ correct | <80% correct |
+| ID Format | 25% | Exact match to pattern | Minor formatting issues | Some IDs incorrect | Many IDs wrong |
+| Naming Patterns | 20% | All parameters/events correct | 1-2 pattern violations | Several violations | Patterns not followed |
+
+**How to Score**:
+1. If domain context is **NOT provided** → Set `domain_compliance: null` (dimension omitted)
+2. If domain context **IS provided** → Score 0.0-1.0 based on rubric above
+3. Use weighted scoring: Template (25%) + Glossary (30%) + ID (25%) + Naming (20%)
+4. Round to 2 decimal places
+
+**Critical**: Domain compliance violations are **NOT bugs** - they are quality issues. A requirement can violate domain conventions and still be functionally correct. However, high-quality domain-aware requirements should score 0.95+ on this dimension.
 
 ---
 
@@ -295,18 +396,36 @@ For each quality issue found, create a QualityIssue with:
 
 Calculate weighted average of dimension scores:
 
+**For Generic Requirements (4 dimensions)**:
 ```
 overall_score = (completeness + clarity + testability + traceability) / 4
 ```
 
-**Example Calculation**:
+**For Domain-Aware Requirements (5 dimensions)**:
 ```
-completeness:  0.90
-clarity:       0.85
-testability:   0.80
-traceability:  0.95
+overall_score = (completeness + clarity + testability + traceability + domain_compliance) / 5
+```
+
+**Example Calculation (Generic)**:
+```
+completeness:     0.90
+clarity:          0.85
+testability:      0.80
+traceability:     0.95
+domain_compliance: null  // Not applicable
 --------------------------
-overall_score: 0.875
+overall_score: 0.875  (4-dimension average)
+```
+
+**Example Calculation (Domain-Aware)**:
+```
+completeness:     0.90
+clarity:          0.85
+testability:      0.80
+traceability:     0.95
+domain_compliance: 0.92
+--------------------------
+overall_score: 0.884  (5-dimension average)
 ```
 
 ---

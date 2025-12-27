@@ -33,17 +33,17 @@ class TestEnergyEstimation:
         # 500 input + 500 output tokens = 1000 total tokens
         energy = estimate_energy(GPT_4O, input_tokens=500, output_tokens=500, include_pue=True)
 
-        # Expected: (500/1000 * 0.0006 + 500/1000 * 0.0006) * 1.10
-        # = (0.0003 + 0.0003) * 1.10 = 0.00066 Wh
-        expected = 0.00066
+        # Expected: (500/1000 * 0.6 + 500/1000 * 0.6) * 1.10
+        # = (0.3 + 0.3) * 1.10 = 0.66 Wh
+        expected = 0.66
 
         # Allow ±5% tolerance for floating point arithmetic
         assert abs(energy - expected) < expected * 0.05, \
             f"GPT-4o energy ({energy:.6f} Wh) should be ~{expected:.6f} Wh for 1000 tokens"
 
-        # Verify energy is in reasonable range (0.0006-0.0007 Wh)
-        assert 0.0006 <= energy <= 0.0007, \
-            f"GPT-4o energy should be between 0.0006-0.0007 Wh, got {energy:.6f}"
+        # Verify energy is in reasonable range (0.6-0.7 Wh)
+        assert 0.6 <= energy <= 0.7, \
+            f"GPT-4o energy should be between 0.6-0.7 Wh, got {energy:.6f}"
 
     def test_energy_calculation_gemini(self):
         """
@@ -60,17 +60,17 @@ class TestEnergyEstimation:
             include_pue=True
         )
 
-        # Expected: (500/1000 * 0.00048 + 500/1000 * 0.00048) * 1.10
-        # = (0.00024 + 0.00024) * 1.10 = 0.000528 Wh
-        expected = 0.000528
+        # Expected: (500/1000 * 0.48 + 500/1000 * 0.48) * 1.10
+        # = (0.24 + 0.24) * 1.10 = 0.528 Wh
+        expected = 0.528
 
         # Allow ±5% tolerance
         assert abs(energy - expected) < expected * 0.05, \
             f"Gemini energy ({energy:.6f} Wh) should be ~{expected:.6f} Wh for 1000 tokens"
 
-        # Verify energy is in reasonable range (0.00048-0.00055 Wh)
-        assert 0.00048 <= energy <= 0.00055, \
-            f"Gemini energy should be between 0.00048-0.00055 Wh, got {energy:.6f}"
+        # Verify energy is in reasonable range (0.48-0.55 Wh)
+        assert 0.48 <= energy <= 0.55, \
+            f"Gemini energy should be between 0.48-0.55 Wh, got {energy:.6f}"
 
     def test_energy_zero_tokens(self):
         """Test energy calculation with zero tokens (edge case)."""

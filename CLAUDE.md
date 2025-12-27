@@ -4,15 +4,15 @@
 
 **Project:** Requirements Development Agentic Workflow
 **Repository:** req_dev_musical_spork
-**Status:** Phase 6 Complete - Production-Ready
+**Status:** Phase 7 Complete - Domain-Aware Requirements Decomposition
 **Architecture:** LangGraph-based multi-agent system
 **Language:** Python 3.11
 
-This is an AI-powered requirements decomposition system using LangGraph to orchestrate multiple LLM agents for breaking down high-level system specifications into detailed, testable requirements.
+This is an AI-powered requirements decomposition system using LangGraph to orchestrate multiple LLM agents for breaking down high-level system specifications into detailed, testable requirements with optional domain-specific enforcement.
 
-**Current Phase:** Phase 6.1 (Energy Consumption Tracking) ✅ COMPLETE
+**Current Phase:** Phase 7 (Domain-Aware Requirements Decomposition) ✅ COMPLETE
 **Next Step:** Production Deployment or Optional Phase 6.2-6.4 Enhancements
-**Timeline:** 4.5 weeks completed (Phase 0-6.1)
+**Timeline:** 5.5 weeks completed (Phase 0-7)
 
 For complete phase history and achievements, see: `docs/phases/README.md`
 
@@ -35,7 +35,9 @@ For complete phase history and achievements, see: `docs/phases/README.md`
    - Uses GPT-5 Nano (no TPM limits, cost-efficient)
 
 4. **Validate Node** (QualityAssuranceAgent)
-   - Automated quality scoring (4 metrics: completeness, clarity, testability, traceability)
+   - Automated quality scoring (4 or 5 metrics: completeness, clarity, testability, traceability, **domain_compliance**)
+   - 5th dimension (domain compliance) scored when domain context provided (Phase 7)
+   - Configurable dimension weighting via environment variables (Phase 7.3)
    - Quality gate with 0.80 threshold (configurable)
    - Iterative refinement loop (max 3 iterations)
    - Uses Gemini 2.5 Flash (best price-performance)
@@ -43,8 +45,8 @@ For complete phase history and achievements, see: `docs/phases/README.md`
 ### State Schema
 
 Complete schema in `src/state.py`. Key fields:
-- **Input:** `spec_document_path`, `target_subsystem`, `review_before_decompose`
-- **Processing:** `extracted_requirements`, `system_context`, `decomposition_strategy`, `decomposed_requirements`
+- **Input:** `spec_document_path`, `target_subsystem`, `review_before_decompose`, **`domain_name`**, **`subsystem_id`** (Phase 7)
+- **Processing:** `extracted_requirements`, `system_context`, `decomposition_strategy`, `decomposed_requirements`, **`domain_context`** (Phase 7)
 - **Quality Control:** `quality_metrics`, `validation_passed`, `iteration_count`, `refinement_feedback`, `validation_issues`, `previous_attempt`
 - **Human Review:** `human_feedback`, `requires_human_review`
 - **Observability:** `total_cost`, `cost_breakdown`, `timing_breakdown`, `total_energy_wh`, `energy_breakdown`
@@ -105,6 +107,27 @@ Complete schema in `src/state.py`. Key fields:
 - LangSmith integration infrastructure (optional)
 - Rich CLI output with timing, cost, and energy breakdowns
 
+### 7. Domain-Aware Processing (Phase 7) ⚠️ NEW
+- **Opt-in Feature:** Domain context is optional, defaults to generic decomposition
+- **3-Tier Architecture:**
+  - Layer 1: Common domain conventions and glossary (applies to all subsystems)
+  - Layer 2: Subsystem-specific examples (targeted guidance)
+  - Layer 3: Generic examples (fallback patterns)
+- **Domain Context Injection:** BaseAgent.get_skill_content() injects domain content between methodology and examples
+- **5th Quality Dimension:** Domain Compliance scored only when domain context provided
+- **Configurable Weighting:** Quality dimension weights customizable via environment variables (Phase 7.3)
+- **Backward Compatibility:** Generic (non-domain) decomposition unchanged, fully compatible
+- **Graceful Fallback:** Domain loading failures automatically fall back to generic with warning
+- **Domain Structure:**
+  ```
+  domains/<domain_name>/
+  ├── domain_config.json         # Metadata and subsystem registry
+  ├── conventions.md             # Common conventions (Layer 1)
+  ├── glossary.md                # Domain glossary (Layer 1)
+  └── subsystems/<subsystem_id>/
+      └── examples.md            # Subsystem examples (Layer 2)
+  ```
+
 ## Development Guidelines
 
 ### For AI Assistants Working on This Project
@@ -156,6 +179,17 @@ Complete schema in `src/state.py`. Key fields:
    - Use LangGraph interrupts properly
    - Provide clear prompts for human review
    - Support state inspection and resumption via checkpoint IDs
+
+9. **Domain-Aware Features (Phase 7)** ⚠️ NEW
+   - Domain context is ALWAYS optional - generic must work without domain
+   - Load domain context ONCE in extract_node, pass through state
+   - Inject domain content in BaseAgent.get_skill_content() between methodology and examples
+   - Domain loading failures MUST gracefully fall back to generic with warning (non-fatal)
+   - 5th dimension (domain_compliance) scored ONLY when domain_context present
+   - Quality weights recalculated automatically based on domain presence (4D vs 5D)
+   - CLI: `--list-domains` and `--list-subsystems <domain>` for discovery
+   - Domain files: JSON metadata + markdown content (conventions, glossary, examples)
+   - Test backward compatibility: all existing tests must pass without domain context
 
 ## Critical Implementation Patterns
 
@@ -230,6 +264,63 @@ if not adherence_check["passed"]:
     }
 ```
 
+### Domain Context Loading Pattern (Phase 7) ⚠️ NEW
+
+```python
+# In extract_node (load once at workflow entry):
+domain_context = None
+domain_name = state.get('domain_name', 'generic')
+subsystem_id = state.get('subsystem_id')
+
+if domain_name and domain_name != 'generic':
+    try:
+        from src.utils.domain_loader import DomainLoader, DomainLoadError
+
+        # Load domain context
+        domain_context = DomainLoader.load_context(
+            domain_name=domain_name,
+            subsystem_id=subsystem_id
+        )
+
+        # Log successful load (INFO level)
+        error_log.append({
+            'timestamp': datetime.utcnow().isoformat(),
+            'error_type': 'INFO',
+            'node': 'extract',
+            'message': f"Loaded domain context: {domain_name}" +
+                      (f"/{subsystem_id}" if subsystem_id else "")
+        })
+    except DomainLoadError as e:
+        # Non-fatal: fall back to generic domain
+        error_log.append({
+            'timestamp': datetime.utcnow().isoformat(),
+            'error_type': 'CONTENT',
+            'node': 'extract',
+            'message': f"Domain loading failed, using generic domain: {str(e)}"
+        })
+        domain_context = None  # Explicit fallback
+
+# Return with domain_context in state
+return {
+    **state,
+    'domain_context': domain_context,  # Pass to downstream nodes
+    'error_log': error_log
+}
+
+# In agents (inject domain into skill content):
+skill_content = self.get_skill_content(domain_context)
+# skill_content now includes domain conventions, glossary, examples if present
+
+# In validate node (pass domain_context for 5th dimension):
+quality_metrics = agent.assess_quality(
+    requirements=decomposed_requirements,
+    automated_results=automated_results,
+    strategy=decomposition_strategy,
+    enable_fallback=True,
+    domain_context=domain_context  # Enable 5D scoring if present
+)
+```
+
 ## Quick References
 
 ### Documentation
@@ -266,6 +357,13 @@ See `.env.example` for complete environment variable documentation.
 - `COST_TRACKING_ENABLED=true` - Enable cost tracking
 - `COST_BUDGET_MAX=5.00` - Maximum budget per run
 
+**Phase 7 Settings:**
+- `QUALITY_WEIGHT_COMPLETENESS=0.25` - Completeness dimension weight (generic: 0.25, domain-aware: 0.20)
+- `QUALITY_WEIGHT_CLARITY=0.25` - Clarity dimension weight
+- `QUALITY_WEIGHT_TESTABILITY=0.25` - Testability dimension weight
+- `QUALITY_WEIGHT_TRACEABILITY=0.25` - Traceability dimension weight
+- `QUALITY_WEIGHT_DOMAIN_COMPLIANCE=0.20` - Domain compliance weight (only for domain-aware, ignored for generic)
+
 ### Git Workflow
 
 **Branch:** `main` (or feature branches)
@@ -286,13 +384,14 @@ See `.env.example` for complete environment variable documentation.
 ### For Questions About
 
 - **Architecture:** `docs/implementation/mvp_plan.md` Section 2
-- **Phases 1-6:** `docs/phases/README.md` or `docs/phases/phaseN/README.md`
+- **Phases 1-7:** `docs/phases/README.md` or `docs/phases/phaseN/README.md`
 - **State Schema:** `src/state.py` or `docs/api_documentation.md`
 - **Skills:** `skills/README.md` or `docs/implementation/mvp_plan.md` Appendix A
 - **Testing:** `tests/README.md` or `docs/phases/phase4/README.md`
+- **Domain-Aware Features:** `docs/phases/phase7/README.md` or `docs/user_guide.md` (Phase 7 sections)
 
 ---
 
-**Last Updated:** November 15, 2025
-**Status:** Production-Ready with Energy Tracking
-**Version:** 1.0 (Optimized)
+**Last Updated:** December 3, 2025
+**Status:** Production-Ready with Domain-Aware Requirements
+**Version:** 1.2.0 (Phase 7 Complete)

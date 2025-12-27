@@ -1,7 +1,7 @@
 # Observability & Cost Tracking Guide
 
-**Version:** Phase 5
-**Last Updated:** November 12, 2025
+**Version:** Phase 6
+**Last Updated:** December 27, 2025
 
 ## Overview
 
@@ -21,6 +21,12 @@ The requirements decomposition system includes comprehensive observability featu
 - **Historical quality trends** across workflow runs
 - **Subsystem comparison** for identifying weak points
 - **Pass rate tracking** and iteration counts
+
+### Energy Tracking
+- **Token-based energy estimation** (Wh) for each workflow execution
+- **Per-node energy breakdown**
+- **Contextual comparisons** (equivalent TV usage, EV distance)
+- **Energy coefficients** for 8 major LLM models (Gemini, GPT, Claude)
 
 ### Reporting
 - **Automated report generation** with cost and quality trends
@@ -183,6 +189,32 @@ Quality Trend Report (Last 30 days)
 ┗━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┛
 ```
 
+## Energy Monitoring Details
+
+### Methodology
+
+Uses heuristic token-based estimation (±30% accuracy) based on published research from Epoch AI (Feb 2025) and Google (Aug 2025).
+
+**Formula:**
+`Total Energy (Wh) = (Input Tokens × E_in + Output Tokens × E_out) × PUE`
+
+Where **PUE** (Power Usage Effectiveness) is ~1.10 for cloud datacenters.
+
+### Energy Coefficients
+
+| Model | Energy / 1K Tokens (Wh) | Notes |
+|-------|-------------------------|-------|
+| **Gemini 2.5 Flash** | 0.48 | Efficient (0.24 Wh / 500 tokens) |
+| **GPT-4o** | 0.6 | Standard (0.3 Wh / 500 tokens) |
+| **GPT-5 Nano** | 0.3 | High efficiency |
+| **Claude 3.5 Sonnet** | 0.7 | Higher capacity |
+
+### Contextual Comparisons
+
+To make energy usage relatable, the system displays:
+- **TV Usage:** Equivalent minutes of watching a 50W LED TV.
+- **EV Distance:** Equivalent meters driven by an electric car (0.25 kWh/km).
+
 ## Budget Management
 
 ### Configuration
@@ -340,7 +372,7 @@ sqlite3 checkpoints/quality.db "VACUUM"
 2. **Compare subsystems** - identify problematic areas
 3. **Monitor pass rates** - declining rates signal problems
 4. **Review failed runs** - understand failure patterns
-5. **Calibrate skills** based on quality feedback
+5. **Calibrate skills** based on quality feedback (future enhancement)
 
 ## API Reference
 
